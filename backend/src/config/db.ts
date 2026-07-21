@@ -1,4 +1,8 @@
 import mongoose from 'mongoose';
+import dns from 'dns';
+
+dns.setDefaultResultOrder('ipv4first');
+dns.setServers(['8.8.8.8', '1.1.1.1']);
 
 const connectDB = async (): Promise<void> => {
   try {
@@ -23,4 +27,3 @@ const connectDB = async (): Promise<void> => {
 };
 
 export default connectDB;
-
