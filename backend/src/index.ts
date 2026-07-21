@@ -1,6 +1,7 @@
 import express, { Request, Response } from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
+import connectDB from './config/db';
 
 dotenv.config();
 
@@ -17,10 +18,16 @@ app.get('/', (_req: Request, res: Response) => {
   res.json({ message: 'ZaiJianHSK Backend API' });
 });
 
-// Start server
-app.listen(port, () => {
-  console.log(`Server is running on port ${port}`);
-});
+// Connect to MongoDB and start server
+const startServer = async () => {
+  await connectDB();
+
+  app.listen(port, () => {
+    console.log(`Server is running on port ${port}`);
+  });
+};
+
+startServer();
 
 export default app;
 
