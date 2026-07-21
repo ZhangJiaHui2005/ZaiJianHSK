@@ -1,0 +1,9 @@
+# Auto-resolve merge conflicts for these file types by favoring both sides (union strategy)
+# This helps prevent syntax-breaking conflicts in code files
+*.ts     merge=union
+*.tsx    merge=union
+*.js     merge=union
+*.jsx    merge=union
+*.json   merge=union
+*.css    merge=union
+*.html   merge=union

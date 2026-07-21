@@ -222,8 +222,18 @@ export interface PendingVocab {
   adminId?: { _id: string; username: string; email: string } | string
   reviewedAt?: string
   notes?: string
+  assignedDeckIds?: string[]
+  assignedDeckNames?: string[]
   createdAt: string
   updatedAt: string
+}
+
+export interface DeckInfo {
+  _id: string
+  name: string
+  hskLevel: string
+  order: number
+  totalWords: number
 }
 
 export interface PendingVocabResponse {
@@ -263,10 +273,12 @@ export async function getPendingVocabulary(
   return res.json()
 }
 
-// Admin duyệt từ
+// Admin duyệt từ (có thể gửi kèm level để phân loại vào thư viện HSK)
 export async function approvePendingVocabulary(
   clerkId: string,
-  pendingId: string
+  pendingId: string,
+  level?: string[],
+  assignedDeckIds?: string[]
 ): Promise<any> {
   const res = await fetch(
     `${API_BASE_URL}/api/vocabulary/pending/${pendingId}/approve`,
@@ -276,6 +288,7 @@ export async function approvePendingVocabulary(
         "Content-Type": "application/json",
         "x-clerk-user-id": clerkId,
       },
+      body: JSON.stringify({ level, assignedDeckIds }),
     }
   )
 
@@ -308,6 +321,47 @@ export async function rejectPendingVocabulary(
   if (!res.ok) {
     const errorData = await res.json().catch(() => ({ error: "Unknown error" }))
     throw new Error(errorData.error || "Failed to reject vocabulary")
+  }
+
+  return res.json()
+}
+
+// Admin xóa vĩnh viễn khỏi PendingVocabulary (chỉ dành cho rejected items)
+export async function permanentDeletePendingVocabulary(
+  clerkId: string,
+  pendingId: string
+): Promise<any> {
+  const res = await fetch(
+    `${API_BASE_URL}/api/vocabulary/pending/${pendingId}/permanent`,
+    {
+      method: "DELETE",
+      headers: {
+        "x-clerk-user-id": clerkId,
+      },
+    }
+  )
+
+  if (!res.ok) {
+    const errorData = await res.json().catch(() => ({ error: "Unknown error" }))
+    throw new Error(errorData.error || "Failed to permanently delete")
+  }
+
+  return res.json()
+}
+
+// Lấy danh sách decks theo các HSK level (dùng cho approve dialog)
+export async function fetchDecksByLevels(
+  levels: string[]
+): Promise<{ success: boolean; decks: DeckInfo[] }> {
+  const params = new URLSearchParams()
+  if (levels.length > 0) params.append("levels", levels.join(","))
+
+  const res = await fetch(
+    `${API_BASE_URL}/api/decks/by-levels?${params.toString()}`
+  )
+
+  if (!res.ok) {
+    throw new Error("Failed to fetch decks by levels")
   }
 
   return res.json()

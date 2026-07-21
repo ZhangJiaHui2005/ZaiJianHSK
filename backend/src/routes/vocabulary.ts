@@ -1,11 +1,46 @@
 import { Router, Request, Response } from "express";
+import mongoose from "mongoose";
 import User from "../models/Users.js";
 import Vocabulary from "../models/Vocabulary.js";
 import PendingVocabulary from "../models/PendingVocabulary.js";
+import Deck from "../models/Deck.js";
 
 const router = Router();
 
-<<<<<<< Updated upstream
+// Helper: map level display name to level value filter regex
+function buildLevelFilter(levelParam: string): Record<string, any> | null {
+  if (!levelParam || levelParam === "all") return null;
+
+  // Mapping from frontend category key to backend level regex
+  const levelMap: Record<string, string> = {
+    hsk1: "(^|[^0-9])1$", // newest-1, new-1, old-1
+    hsk2: "(^|[^0-9])2$",
+    hsk3: "(^|[^0-9])3$",
+    hsk4: "(^|[^0-9])4$",
+    hsk5: "(^|[^0-9])5$",
+    hsk6: "(^|[^0-9])6$",
+    "7": "(^|[^0-9])[789]$", // hsk7_9 => newest-7, newest-8, newest-9
+  };
+
+  const regex = levelMap[levelParam];
+  if (regex) {
+    return { level: { $regex: regex, $options: "i" } };
+  }
+
+  // Fallback: use as direct regex
+  return { level: { $regex: levelParam, $options: "i" } };
+}
+
+// Helper: map a level value (e.g. "newest-1") to hsk key (e.g. "hsk1")
+function levelValueToHskKey(levelValue: string): string | null {
+  const match = levelValue.match(/(\d+)$/);
+  if (!match) return null;
+  const num = parseInt(match[1], 10);
+  if (num >= 1 && num <= 6) return `hsk${num}`;
+  if (num >= 7) return "hsk7_9";
+  return null;
+}
+
 // Middleware: check if user is admin
 const requireAdmin = async (req: Request, res: Response, next: Function) => {
   try {
@@ -32,57 +67,6 @@ const requireAdmin = async (req: Request, res: Response, next: Function) => {
     return res.status(500).json({ error: "Internal server error" });
   }
 };
-=======
-/**
- * Returns level values for MongoDB $elemMatch $in query
- * Supports both 'new-*' and 'newest-*' formats
- */
-function getLevelValues(lvl: string): string[] {
-  const n = lvl.trim().toLowerCase().replace('hsk', '').replace('newest-', '').replace('new-', '');
-  switch (n) {
-    case '1': return ['new-1', 'newest-1'];
-    case '2': return ['new-2', 'newest-2'];
-    case '3': return ['new-3', 'newest-3'];
-    case '4': return ['new-4', 'newest-4'];
-    case '5': return ['new-5', 'newest-5'];
-    case '6': return ['new-6', 'newest-6'];
-    case '7': case '8': case '9': case '7-9': case '7_9':
-      return ['new-7', 'newest-7'];
-    default: return [];
-  }
-}
-
-/**
- * Build a level query that works with array field `level: ["new-7"]` or `level: ["newest-3", "new-4"]`
- */
-function buildLevelQuery(levelValues: string[]): Record<string, any> {
-  if (levelValues.length === 0) return {};
-  return { level: { $elemMatch: { $in: levelValues } } };
-}
-
-// GET /api/vocabulary/stats - Thống kê số lượng từ vựng theo từng cấp độ HSK 3.0
-router.get('/stats', async (_req: Request, res: Response) => {
-  try {
-    const pairs = [
-      { key: 'hsk1', levels: ['new-1', 'newest-1'] },
-      { key: 'hsk2', levels: ['new-2', 'newest-2'] },
-      { key: 'hsk3', levels: ['new-3', 'newest-3'] },
-      { key: 'hsk4', levels: ['new-4', 'newest-4'] },
-      { key: 'hsk5', levels: ['new-5', 'newest-5'] },
-      { key: 'hsk6', levels: ['new-6', 'newest-6'] },
-      { key: 'hsk7_9', levels: ['new-7', 'newest-7'] },
-    ];
-
-    const stats: Record<string, number> = {};
-
-    await Promise.all(
-      pairs.map(async ({ key, levels }) => {
-        const query = buildLevelQuery(levels);
-        const count = await Vocabulary.countDocuments(query);
-        stats[key] = count;
-      })
-    );
->>>>>>> Stashed changes
 
 // Middleware: attach current user from header
 const attachUser = async (req: Request, res: Response, next: Function) => {
@@ -145,12 +129,16 @@ router.get("/pending", requireAdmin, async (req: Request, res: Response) => {
 });
 
 // PATCH /api/vocabulary/pending/:id/approve - Admin duyệt từ
+// Body: { level: string[], assignedDeckIds: string[] }
+// - level: HSK levels to assign (e.g. ["newest-1", "newest-2"])
+// - assignedDeckIds: deck IDs to assign this word to (optional)
 router.patch(
   "/pending/:id/approve",
   requireAdmin,
   async (req: Request, res: Response) => {
     try {
       const { id } = req.params;
+      const { level, assignedDeckIds } = req.body;
       const admin = (req as any).currentUser;
 
       const pending = await PendingVocabulary.findById(id);
@@ -164,7 +152,15 @@ router.patch(
         });
       }
 
-      // Clone into Vocabulary collection
+      // Use admin-provided levels, or fall back to the levels user submitted, or default to empty
+      const assignedLevels: string[] =
+        Array.isArray(level) && level.length > 0
+          ? level
+          : pending.level.length > 0
+            ? pending.level
+            : [];
+
+      // Clone into Vocabulary collection with the determined levels
       const newVocab = await Vocabulary.create({
         simplified: pending.simplified,
         traditional: pending.traditional || "",
@@ -172,26 +168,59 @@ router.patch(
         pinyin: pending.pinyin,
         numeric: pending.numeric || "",
         meanings: pending.meanings,
-        level: pending.level,
+        level: assignedLevels,
         frequency: pending.frequency,
         pos: pending.pos,
         classifiers: pending.classifiers,
       });
 
+      // Assign word to decks if deck IDs are provided
+      const assignedDecks: { deckId: string; deckName: string }[] = [];
+      if (Array.isArray(assignedDeckIds) && assignedDeckIds.length > 0) {
+        for (const deckId of assignedDeckIds) {
+          try {
+            const deck = await Deck.findById(deckId);
+            if (deck) {
+              // Avoid duplicate wordIds
+              if (!deck.wordIds.includes(newVocab._id)) {
+                deck.wordIds.push(newVocab._id);
+                deck.totalWords = deck.wordIds.length;
+                await deck.save();
+              }
+              assignedDecks.push({
+                deckId: deck._id.toString(),
+                deckName: deck.name,
+              });
+            }
+          } catch (deckErr) {
+            console.warn(`Could not assign to deck ${deckId}:`, deckErr);
+          }
+        }
+      }
+
       // Update pending status
       pending.status = "approved";
       pending.adminId = admin._id;
       pending.reviewedAt = new Date();
+      // Save assigned deck info for display in admin table
+      if (assignedDecks.length > 0) {
+        pending.assignedDeckIds = assignedDecks.map(
+          (d) => new mongoose.Types.ObjectId(d.deckId),
+        );
+        pending.assignedDeckNames = assignedDecks.map((d) => d.deckName);
+      }
       await pending.save();
 
       console.log(
-        `✅ Vocabulary approved: ${pending.simplified} (by ${admin.username})`,
+        `✅ Vocabulary approved: ${pending.simplified} (level: ${assignedLevels.join(", ")}) (by ${admin.username})`,
       );
 
       return res.status(200).json({
         message: "Vocabulary approved and added to main collection",
         vocabulary: newVocab,
         pending,
+        assignedLevels,
+        assignedDecks: assignedDecks.length > 0 ? assignedDecks : undefined,
       });
     } catch (error) {
       if (error instanceof Error) {
@@ -202,7 +231,44 @@ router.patch(
   },
 );
 
-// PATCH /api/vocabulary/pending/:id/reject - Admin từ chối từ
+// DELETE /api/vocabulary/pending/:id/permanent - Xóa vĩnh viễn khỏi PendingVocabulary (chỉ cho rejected items)
+router.delete(
+  "/pending/:id/permanent",
+  requireAdmin,
+  async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+
+      const pending = await PendingVocabulary.findById(id);
+      if (!pending) {
+        return res.status(404).json({ error: "Pending vocabulary not found" });
+      }
+
+      if (pending.status !== "rejected") {
+        return res.status(400).json({
+          error: "Only rejected submissions can be permanently deleted",
+        });
+      }
+
+      await PendingVocabulary.findByIdAndDelete(id);
+
+      console.log(
+        `🔥 Pending vocabulary permanently deleted: ${pending.simplified} (ID: ${id})`,
+      );
+
+      return res.status(200).json({
+        message: "Pending vocabulary permanently deleted",
+      });
+    } catch (error) {
+      if (error instanceof Error) {
+        return res.status(500).json({ error: error.message });
+      }
+      return res.status(500).json({ error: "Internal server error" });
+    }
+  },
+);
+
+// PATCH /api/vocabulary/pending/:id/reject - Admin từ chối từ (từ pending hoặc từ chối/ xóa từ đã approved)
 router.patch(
   "/pending/:id/reject",
   requireAdmin,
@@ -217,26 +283,56 @@ router.patch(
         return res.status(404).json({ error: "Pending vocabulary not found" });
       }
 
-      if (pending.status !== "pending") {
+      if (pending.status === "pending") {
+        // Normal reject for pending items
+        pending.status = "rejected";
+        pending.adminId = admin._id;
+        pending.reviewedAt = new Date();
+        pending.notes = notes || "";
+        await pending.save();
+
+        console.log(
+          `❌ Vocabulary rejected: ${pending.simplified} (by ${admin.username})`,
+        );
+
+        return res.status(200).json({
+          message: "Vocabulary submission rejected",
+          pending,
+        });
+      } else if (pending.status === "approved") {
+        // Reject approved word = remove from Vocabulary collection + mark as rejected
+        const vocab = await Vocabulary.findOneAndDelete({
+          simplified: pending.simplified,
+        });
+
+        if (!vocab) {
+          console.warn(
+            `⚠️ Vocabulary ${pending.simplified} not found in main collection during reject`,
+          );
+        }
+
+        pending.status = "rejected";
+        pending.adminId = admin._id;
+        pending.reviewedAt = new Date();
+        pending.notes = notes
+          ? `${notes} | Removed from vocabulary collection on ${new Date().toISOString()}`
+          : `Removed from vocabulary collection on ${new Date().toISOString()}`;
+        await pending.save();
+
+        console.log(
+          `🗑️ Vocabulary rejected & removed from collection: ${pending.simplified} (by ${admin.username})`,
+        );
+
+        return res.status(200).json({
+          message: "Vocabulary rejected and removed from main collection",
+          pending,
+          removedFromVocabulary: !!vocab,
+        });
+      } else {
         return res.status(400).json({
-          error: `This submission has already been ${pending.status}`,
+          error: `Cannot reject a submission with status "${pending.status}"`,
         });
       }
-
-      pending.status = "rejected";
-      pending.adminId = admin._id;
-      pending.reviewedAt = new Date();
-      pending.notes = notes || "";
-      await pending.save();
-
-      console.log(
-        `❌ Vocabulary rejected: ${pending.simplified} (by ${admin.username})`,
-      );
-
-      return res.status(200).json({
-        message: "Vocabulary submission rejected",
-        pending,
-      });
     } catch (error) {
       if (error instanceof Error) {
         return res.status(500).json({ error: error.message });
@@ -271,19 +367,15 @@ router.get("/stats", async (_req: Request, res: Response) => {
     const levelCounts = await Vocabulary.aggregate(pipeline);
 
     for (const item of levelCounts) {
-      const key = item._id.toLowerCase().replace(/\s+/g, "");
-      if (key in hskStats) {
-        hskStats[key] = item.count;
+      const hskKey = levelValueToHskKey(item._id);
+      if (hskKey && hskKey in hskStats) {
+        hskStats[hskKey] += item.count;
       }
     }
 
     return res.status(200).json({
       success: true,
-<<<<<<< Updated upstream
       hsk3Stats: hskStats,
-=======
-      hsk3Stats: stats,
->>>>>>> Stashed changes
       totalWords,
     });
   } catch (error) {
@@ -294,29 +386,21 @@ router.get("/stats", async (_req: Request, res: Response) => {
   }
 });
 
-<<<<<<< Updated upstream
 // GET /api/vocabulary/decks - Lấy danh sách bộ bài học theo HSK level & search
 router.get("/decks", async (req: Request, res: Response) => {
-=======
-// GET /api/vocabulary/decks - Lấy danh sách bộ bài học (decks) tự động từ vocabularies
-router.get('/decks', async (req: Request, res: Response) => {
->>>>>>> Stashed changes
   try {
     const { level = "all", search = "" } = req.query;
 
-<<<<<<< Updated upstream
-    // Build query filter
-    const filter: any = {};
-    if (level && level !== "all" && level !== "7") {
-      filter.level = { $regex: level as string, $options: "i" };
-    } else if (level === "7") {
-      filter.level = { $regex: "hsk[789]", $options: "i" };
-    }
-    if (search) {
+    // Build query filter using helper
+    const levelFilter = buildLevelFilter(level as string);
+    const filter: any = levelFilter || {};
+    if (search && typeof search === "string" && search.trim()) {
+      const searchRegex = { $regex: search.trim(), $options: "i" };
       filter.$or = [
-        { simplified: { $regex: search as string, $options: "i" } },
-        { pinyin: { $regex: search as string, $options: "i" } },
-        { meanings: { $regex: search as string, $options: "i" } },
+        { simplified: searchRegex },
+        { pinyin: searchRegex },
+        { meanings: searchRegex },
+        { traditional: searchRegex },
       ];
     }
 
@@ -325,111 +409,6 @@ router.get('/decks', async (req: Request, res: Response) => {
       .select("simplified traditional pinyin meanings level")
       .sort({ level: 1, simplified: 1 })
       .limit(2000);
-=======
-    const levelPairs = level === 'all'
-      ? [
-          { levels: ['new-1', 'newest-1'], num: '1' },
-          { levels: ['new-2', 'newest-2'], num: '2' },
-          { levels: ['new-3', 'newest-3'], num: '3' },
-          { levels: ['new-4', 'newest-4'], num: '4' },
-          { levels: ['new-5', 'newest-5'], num: '5' },
-          { levels: ['new-6', 'newest-6'], num: '6' },
-          { levels: ['new-7', 'newest-7'], num: '7' },
-        ]
-      : (() => {
-          const vals = getLevelValues(level as string);
-          if (vals.length === 0) return [];
-          return [{ levels: vals, num: vals[0].replace('new-', '').replace('newest-', '') }];
-        })();
-
-    const WORDS_PER_DECK = 250;
-    const allDecks: any[] = [];
-
-    for (const { levels, num } of levelPairs) {
-      const hskTitle = num === '7' ? 'HSK 7-9' : `HSK ${num}`;
-
-      const levelQuery = buildLevelQuery(levels);
-      const query: Record<string, any> = { ...levelQuery };
-
-      if (search && typeof search === 'string' && search.trim() !== '') {
-        const searchRegex = new RegExp(search.trim(), 'i');
-        query.$or = [
-          { simplified: searchRegex },
-          { pinyin: searchRegex },
-          { meanings: searchRegex },
-          { traditional: searchRegex },
-        ];
-      }
-
-      const totalWords = await Vocabulary.countDocuments(query);
-      const totalDecksCount = Math.ceil(totalWords / WORDS_PER_DECK);
-
-      for (let i = 0; i < totalDecksCount; i++) {
-        const deckIndex = i + 1;
-        const startNum = i * WORDS_PER_DECK + 1;
-        const endNum = Math.min((i + 1) * WORDS_PER_DECK, totalWords);
-        const count = endNum - startNum + 1;
-        const levelKey = `newest-${num}`;
-
-        allDecks.push({
-          id: `${levelKey}-deck-${deckIndex}`,
-          hskLevel: hskTitle,
-          title: `${hskTitle} - Bộ Bài Học ${deckIndex} (${startNum} - ${endNum})`,
-          totalWords: count,
-          newWordsCount: count,
-          reviewWordsCount: 0,
-          subtitle: `Danh sách ${count} từ vựng HSK 3.0`,
-          category: `hsk${num}`,
-          levelKey,
-          page: deckIndex,
-          limit: WORDS_PER_DECK,
-        });
-      }
-    }
-
-    return res.status(200).json({
-      success: true,
-      totalDecks: allDecks.length,
-      decks: allDecks,
-    });
-  } catch (error) {
-    if (error instanceof Error) {
-      return res.status(500).json({ success: false, error: error.message });
-    }
-    return res.status(500).json({ success: false, error: 'Internal server error' });
-  }
-});
-
-// GET /api/vocabulary/deck-words - Lấy từ vựng chi tiết của 1 deck
-router.get('/deck-words', async (req: Request, res: Response) => {
-  try {
-    const { levelKey, page = '1', limit = '250', search } = req.query;
-
-    const query: Record<string, any> = {};
-
-    if (levelKey && typeof levelKey === 'string') {
-      const levelValues = getLevelValues(levelKey.replace('newest-', ''));
-      if (levelValues.length > 0) {
-        Object.assign(query, buildLevelQuery(levelValues));
-      } else {
-        query.level = { $elemMatch: { $eq: levelKey } };
-      }
-    }
-
-    if (search && typeof search === 'string' && search.trim() !== '') {
-      const searchRegex = new RegExp(search.trim(), 'i');
-      query.$or = [
-        { simplified: searchRegex },
-        { pinyin: searchRegex },
-        { meanings: searchRegex },
-        { traditional: searchRegex },
-      ];
-    }
-
-    const pageNum = Math.max(1, parseInt(page as string, 10) || 1);
-    const limitNum = Math.min(250, Math.max(1, parseInt(limit as string, 10) || 250));
-    const skip = (pageNum - 1) * limitNum;
->>>>>>> Stashed changes
 
     // Group into decks by level
     const deckMap = new Map<
@@ -523,37 +502,22 @@ router.get("/deck-words", async (req: Request, res: Response) => {
   }
 });
 
-<<<<<<< Updated upstream
 // GET /api/vocabulary - Lấy danh sách từ vựng (phân trang, lọc level, tìm kiếm)
 router.get("/", async (req: Request, res: Response) => {
-=======
-// GET /api/vocabulary - Danh sách từ vựng (phân trang, lọc level, tìm kiếm)
-router.get('/', async (req: Request, res: Response) => {
->>>>>>> Stashed changes
   try {
     const { level = "all", search = "", page = "1", limit = "20" } = req.query;
     const pageNum = parseInt(page as string, 10);
     const limitNum = parseInt(limit as string, 10);
 
-<<<<<<< Updated upstream
-    const filter: any = {};
-    if (level && level !== "all") {
-      filter.level = { $regex: level as string, $options: "i" };
-=======
-    const query: Record<string, any> = {};
-
-    if (level && typeof level === 'string' && level !== 'all') {
-      const levelValues = getLevelValues(level);
-      if (levelValues.length > 0) {
-        Object.assign(query, buildLevelQuery(levelValues));
-      }
->>>>>>> Stashed changes
-    }
-    if (search) {
+    const levelFilter = buildLevelFilter(level as string);
+    const filter: any = levelFilter || {};
+    if (search && typeof search === "string" && search.trim()) {
+      const searchRegex = { $regex: search.trim(), $options: "i" };
       filter.$or = [
-        { simplified: { $regex: search as string, $options: "i" } },
-        { pinyin: { $regex: search as string, $options: "i" } },
-        { meanings: { $regex: search as string, $options: "i" } },
+        { simplified: searchRegex },
+        { pinyin: searchRegex },
+        { meanings: searchRegex },
+        { traditional: searchRegex },
       ];
     }
 
@@ -580,15 +544,28 @@ router.get('/', async (req: Request, res: Response) => {
   }
 });
 
-<<<<<<< Updated upstream
-// ==================== USER ROUTES ====================
-=======
 // GET /api/vocabulary/:id - Chi tiết từ vựng theo ID
-router.get('/:id', async (req: Request, res: Response) => {
+router.get("/:id", async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     const word = await Vocabulary.findById(id).lean();
->>>>>>> Stashed changes
+
+    if (!word) {
+      return res
+        .status(404)
+        .json({ success: false, error: "Vocabulary not found" });
+    }
+
+    return res.status(200).json({ success: true, word });
+  } catch (error) {
+    if (error instanceof Error) {
+      return res.status(500).json({ error: error.message });
+    }
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// ==================== USER ROUTES ====================
 
 // POST /api/vocabulary/pending - User gửi từ mới
 router.post("/pending", attachUser, async (req: Request, res: Response) => {
