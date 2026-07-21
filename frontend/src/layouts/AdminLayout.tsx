@@ -23,11 +23,12 @@ import {
   SidebarInset,
 } from "@/components/ui/sidebar"
 import { Skeleton } from "@/components/ui/skeleton"
-import { LayoutDashboard, LogOut, Users } from "lucide-react"
+import { LayoutDashboard, LogOut, Users, FileClock } from "lucide-react"
 
 const navItems = [
   { path: "/admin", label: "Dashboard", icon: LayoutDashboard },
   { path: "/admin/users", label: "Manage Users", icon: Users },
+  { path: "/admin/pending-vocabulary", label: "Pending", icon: FileClock },
 ]
 
 export default function AdminLayout() {
@@ -89,7 +90,7 @@ export default function AdminLayout() {
         <SidebarContent>
           <SidebarGroup>
             <SidebarGroupContent>
-<SidebarMenu>
+              <SidebarMenu>
                 {navItems.map((item) => {
                   const Icon = item.icon
                   return (
@@ -115,14 +116,12 @@ export default function AdminLayout() {
             <SidebarMenuItem>
               <DropdownMenu>
                 <DropdownMenuTrigger className={"w-full"}>
-                  <button className="flex w-full items-center justify-between gap-3 rounded-md px-2 py-2 text-left hover:bg-accent">
-                    <div className="flex items-center gap-3">
+                  <span className="flex w-full cursor-pointer items-center justify-between gap-3 rounded-md px-2 py-2 text-left hover:bg-accent">
+                    <span className="flex items-center gap-3">
                       <UserButton />
-                      <span className="truncate text-sm">
-                        {user.username}
-                      </span>
-                    </div>
-                  </button>
+                      <span className="truncate text-sm">{user.username}</span>
+                    </span>
+                  </span>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" side="right" className="w-48">
                   <DropdownMenuItem
@@ -154,4 +153,3 @@ export default function AdminLayout() {
     </SidebarProvider>
   )
 }
-

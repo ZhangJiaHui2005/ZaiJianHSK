@@ -194,6 +194,210 @@ router.patch(
   },
 );
 
+// ==================== PUBLIC ROUTES ====================
+
+// GET /api/vocabulary/stats - Lấy thống kê số từ vựng theo cấp độ HSK
+router.get("/stats", async (_req: Request, res: Response) => {
+  try {
+    const totalWords = await Vocabulary.countDocuments();
+
+    const hskStats: Record<string, number> = {
+      hsk1: 0,
+      hsk2: 0,
+      hsk3: 0,
+      hsk4: 0,
+      hsk5: 0,
+      hsk6: 0,
+      hsk7_9: 0,
+    };
+
+    // Count words per HSK level
+    const pipeline = [
+      { $unwind: "$level" },
+      { $group: { _id: "$level", count: { $sum: 1 } } },
+    ];
+    const levelCounts = await Vocabulary.aggregate(pipeline);
+
+    for (const item of levelCounts) {
+      const key = item._id.toLowerCase().replace(/\s+/g, "");
+      if (key in hskStats) {
+        hskStats[key] = item.count;
+      }
+    }
+
+    return res.status(200).json({
+      success: true,
+      hsk3Stats: hskStats,
+      totalWords,
+    });
+  } catch (error) {
+    if (error instanceof Error) {
+      return res.status(500).json({ error: error.message });
+    }
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// GET /api/vocabulary/decks - Lấy danh sách bộ bài học theo HSK level & search
+router.get("/decks", async (req: Request, res: Response) => {
+  try {
+    const { level = "all", search = "" } = req.query;
+
+    // Build query filter
+    const filter: any = {};
+    if (level && level !== "all" && level !== "7") {
+      filter.level = { $regex: level as string, $options: "i" };
+    } else if (level === "7") {
+      filter.level = { $regex: "hsk[789]", $options: "i" };
+    }
+    if (search) {
+      filter.$or = [
+        { simplified: { $regex: search as string, $options: "i" } },
+        { pinyin: { $regex: search as string, $options: "i" } },
+        { meanings: { $regex: search as string, $options: "i" } },
+      ];
+    }
+
+    // Get all matching words to build decks
+    const words = await Vocabulary.find(filter)
+      .select("simplified traditional pinyin meanings level")
+      .sort({ level: 1, simplified: 1 })
+      .limit(2000);
+
+    // Group into decks by level
+    const deckMap = new Map<
+      string,
+      { title: string; hskLevel: string; levelKey: string; words: any[] }
+    >();
+
+    for (const w of words) {
+      for (const lvl of w.level) {
+        const lvlLower = lvl.toLowerCase();
+        const levelKey = lvlLower.replace(/\s+/g, "");
+        if (!deckMap.has(levelKey)) {
+          const hskDisplay = lvl.toUpperCase().replace("HSK", "HSK ");
+          deckMap.set(levelKey, {
+            title: `${hskDisplay} - Từ Vựng Chi Tiết`,
+            hskLevel: hskDisplay.trim(),
+            levelKey,
+            words: [],
+          });
+        }
+        deckMap.get(levelKey)!.words.push(w);
+      }
+    }
+
+    // Convert to array of HskDeck
+    const decks = Array.from(deckMap.entries()).map(([levelKey, data]) => ({
+      id: `deck-${levelKey}`,
+      hskLevel: data.hskLevel,
+      title: data.title,
+      totalWords: data.words.length,
+      newWordsCount: Math.min(data.words.length, 50),
+      reviewWordsCount: 0,
+      subtitle: `Danh sách ${data.words.length} từ`,
+      category: levelKey as any,
+      levelKey,
+      page: 1,
+      limit: 50,
+      isBookmarked: false,
+    }));
+
+    return res.status(200).json({
+      success: true,
+      totalDecks: decks.length,
+      decks,
+    });
+  } catch (error) {
+    if (error instanceof Error) {
+      return res.status(500).json({ error: error.message });
+    }
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// GET /api/vocabulary/deck-words - Lấy danh sách từ vựng trong 1 bộ bài học
+router.get("/deck-words", async (req: Request, res: Response) => {
+  try {
+    const { levelKey, page = "1", limit = "50", search = "" } = req.query;
+
+    const pageNum = parseInt(page as string, 10);
+    const limitNum = parseInt(limit as string, 10);
+
+    const filter: any = {
+      level: { $regex: levelKey as string, $options: "i" },
+    };
+    if (search) {
+      filter.$or = [
+        { simplified: { $regex: search as string, $options: "i" } },
+        { pinyin: { $regex: search as string, $options: "i" } },
+        { meanings: { $regex: search as string, $options: "i" } },
+      ];
+    }
+
+    const total = await Vocabulary.countDocuments(filter);
+    const words = await Vocabulary.find(filter)
+      .sort({ frequency: 1 })
+      .skip((pageNum - 1) * limitNum)
+      .limit(limitNum);
+
+    return res.status(200).json({
+      success: true,
+      total,
+      page: pageNum,
+      limit: limitNum,
+      words,
+    });
+  } catch (error) {
+    if (error instanceof Error) {
+      return res.status(500).json({ error: error.message });
+    }
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// GET /api/vocabulary - Lấy danh sách từ vựng (phân trang, lọc level, tìm kiếm)
+router.get("/", async (req: Request, res: Response) => {
+  try {
+    const { level = "all", search = "", page = "1", limit = "20" } = req.query;
+    const pageNum = parseInt(page as string, 10);
+    const limitNum = parseInt(limit as string, 10);
+
+    const filter: any = {};
+    if (level && level !== "all") {
+      filter.level = { $regex: level as string, $options: "i" };
+    }
+    if (search) {
+      filter.$or = [
+        { simplified: { $regex: search as string, $options: "i" } },
+        { pinyin: { $regex: search as string, $options: "i" } },
+        { meanings: { $regex: search as string, $options: "i" } },
+      ];
+    }
+
+    const total = await Vocabulary.countDocuments(filter);
+    const totalPages = Math.ceil(total / limitNum);
+    const words = await Vocabulary.find(filter)
+      .sort({ frequency: 1 })
+      .skip((pageNum - 1) * limitNum)
+      .limit(limitNum);
+
+    return res.status(200).json({
+      success: true,
+      total,
+      page: pageNum,
+      limit: limitNum,
+      totalPages,
+      words,
+    });
+  } catch (error) {
+    if (error instanceof Error) {
+      return res.status(500).json({ error: error.message });
+    }
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
+
 // ==================== USER ROUTES ====================
 
 // POST /api/vocabulary/pending - User gửi từ mới

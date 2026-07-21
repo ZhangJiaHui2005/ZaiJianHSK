@@ -73,13 +73,15 @@ export default function AdminDashboard() {
                 <CardDescription>{stat.description}</CardDescription>
               </CardHeader>
               <CardContent>
-                <p className="text-3xl font-bold">
+                <div className="text-3xl font-bold">
                   {stat.value === "—" ? (
                     <Skeleton className="h-8 w-16" />
                   ) : (
-                    <span className="capitalize text-primary">{stat.value}</span>
+                    <span className="text-primary capitalize">
+                      {stat.value}
+                    </span>
                   )}
-                </p>
+                </div>
               </CardContent>
             </Card>
           )
@@ -88,4 +90,3 @@ export default function AdminDashboard() {
     </div>
   )
 }
-

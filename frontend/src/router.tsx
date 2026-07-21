@@ -6,6 +6,7 @@ import Dashboard from "./pages/Dashboard"
 import VocabularyLibrary from "./pages/user/VocabularyLibrary"
 import AdminDashboard from "./pages/admin/Dashboard"
 import AdminUsers from "./pages/admin/Users"
+import AdminPendingVocabulary from "./pages/admin/PendingVocabulary"
 
 export const router = createBrowserRouter([
   {
@@ -41,6 +42,10 @@ export const router = createBrowserRouter([
           {
             path: "users",
             element: <AdminUsers />,
+          },
+          {
+            path: "pending-vocabulary",
+            element: <AdminPendingVocabulary />,
           },
         ],
       },
