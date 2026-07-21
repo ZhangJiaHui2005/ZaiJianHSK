@@ -3,7 +3,7 @@ import App from "./App"
 import UserLayout from "./layouts/UserLayout"
 import AdminLayout from "./layouts/AdminLayout"
 import Dashboard from "./pages/Dashboard"
-import UserDashboard from "./pages/user/Dashboard"
+import VocabularyLibrary from "./pages/user/VocabularyLibrary"
 import AdminDashboard from "./pages/admin/Dashboard"
 import AdminUsers from "./pages/admin/Users"
 
@@ -22,7 +22,11 @@ export const router = createBrowserRouter([
         children: [
           {
             index: true,
-            element: <UserDashboard />,
+            element: <VocabularyLibrary />,
+          },
+          {
+            path: "library",
+            element: <VocabularyLibrary />,
           },
         ],
       },
@@ -43,4 +47,3 @@ export const router = createBrowserRouter([
     ],
   },
 ])
-
