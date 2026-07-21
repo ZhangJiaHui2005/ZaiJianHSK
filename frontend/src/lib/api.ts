@@ -56,3 +56,15 @@ export async function getUserByClerkId(clerkId: string): Promise<UserResponse['u
   return data.user;
 }
 
+// Xoá user theo clerkId (admin)
+export async function deleteUser(clerkId: string): Promise<void> {
+  const res = await fetch(`${API_BASE_URL}/api/users/delete/${clerkId}`, {
+    method: 'DELETE',
+  });
+
+  if (!res.ok) {
+    const errorData = await res.json().catch(() => ({ error: 'Unknown error' }));
+    throw new Error(errorData.error || 'Failed to delete user');
+  }
+}
+

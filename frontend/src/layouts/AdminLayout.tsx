@@ -1,7 +1,13 @@
 import { Outlet, Link, useLocation, Navigate } from "react-router-dom"
-import { useUser } from "@clerk/clerk-react"
+import { UserButton, useClerk, useUser } from "@clerk/clerk-react"
 import { useEffect, useState } from "react"
 import { getUserByClerkId } from "@/lib/api"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 import {
   SidebarProvider,
   Sidebar,
@@ -17,7 +23,7 @@ import {
   SidebarInset,
 } from "@/components/ui/sidebar"
 import { Skeleton } from "@/components/ui/skeleton"
-import { LayoutDashboard, Users, UserCircle } from "lucide-react"
+import { LayoutDashboard, LogOut, Users } from "lucide-react"
 
 const navItems = [
   { path: "/admin", label: "Dashboard", icon: LayoutDashboard },
@@ -26,6 +32,7 @@ const navItems = [
 
 export default function AdminLayout() {
   const { user, isLoaded, isSignedIn } = useUser()
+  const { signOut } = useClerk()
   const location = useLocation()
   const [userRole, setUserRole] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
@@ -73,7 +80,6 @@ export default function AdminLayout() {
             to="/"
             className="flex items-center gap-2 px-2 text-lg font-semibold"
           >
-            <LayoutDashboard className="size-5" />
             <span className="truncate group-data-[collapsible=icon]:hidden">
               ZaiJianHSK Admin
             </span>
@@ -104,16 +110,30 @@ export default function AdminLayout() {
           </SidebarGroup>
         </SidebarContent>
 
-<SidebarFooter>
+        <SidebarFooter>
           <SidebarMenu>
             <SidebarMenuItem>
-              <SidebarMenuButton
-                tooltip={user?.username || user?.firstName || "User"}
-                render={<Link to="/user" />}
-              >
-                <UserCircle />
-                <span>{user?.username || user?.firstName || "User"}</span>
-              </SidebarMenuButton>
+              <DropdownMenu>
+                <DropdownMenuTrigger className={"w-full"}>
+                  <button className="flex w-full items-center justify-between gap-3 rounded-md px-2 py-2 text-left hover:bg-accent">
+                    <div className="flex items-center gap-3">
+                      <UserButton />
+                      <span className="truncate text-sm">
+                        {user.username}
+                      </span>
+                    </div>
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" side="right" className="w-48">
+                  <DropdownMenuItem
+                    onClick={() => signOut(() => window.location.assign("/"))}
+                    className="cursor-pointer"
+                  >
+                    <LogOut className="mr-2 h-4 w-4" />
+                    Logout
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </SidebarMenuItem>
           </SidebarMenu>
         </SidebarFooter>
