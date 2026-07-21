@@ -4,6 +4,7 @@ import dotenv from 'dotenv';
 import connectDB from './config/db.js';
 import userRoutes from './routes/users.js';
 import vocabularyRoutes from './routes/vocabulary.js';
+import deckRoutes from './routes/deck.js';
 
 dotenv.config();
 
@@ -18,6 +19,7 @@ app.use(express.urlencoded({ extended: true }));
 // Routes
 app.use('/api/users', userRoutes);
 app.use('/api/vocabulary', vocabularyRoutes);
+app.use('/api/decks', deckRoutes);
 
 app.get('/', (_req: Request, res: Response) => {
   res.json({ message: 'ZaiJianHSK Backend API' });

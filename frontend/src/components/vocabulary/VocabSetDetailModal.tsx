@@ -14,10 +14,10 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 
 interface VocabSetDetailModalProps {
-  deck: HskDeck | null;
-  isOpen: boolean;
-  onClose: () => void;
-  onStartLearn?: (deckId: string) => void;
+  deck: HskDeck | null
+  isOpen: boolean
+  onClose: () => void
+  onStartLearn?: (deckId: string) => void
 }
 
 export const VocabSetDetailModal: React.FC<VocabSetDetailModalProps> = ({
@@ -28,6 +28,7 @@ export const VocabSetDetailModal: React.FC<VocabSetDetailModalProps> = ({
 }) => {
   const [words, setWords] = useState<VocabularyWord[]>([])
   const [loading, setLoading] = useState<boolean>(false)
+  const [error, setError] = useState<string | null>(null)
   const [searchQuery, setSearchQuery] = useState<string>('')
 
   useEffect(() => {
@@ -35,6 +36,7 @@ export const VocabSetDetailModal: React.FC<VocabSetDetailModalProps> = ({
 
     const loadWords = async () => {
       setLoading(true)
+      setError(null)
       try {
         const res = await fetchDeckWords({
           levelKey: deck.levelKey,
@@ -44,9 +46,12 @@ export const VocabSetDetailModal: React.FC<VocabSetDetailModalProps> = ({
         })
         if (res.success) {
           setWords(res.words)
+        } else {
+          setError('API tra ve loi')
         }
       } catch (err) {
-        console.error('Failed to load deck words:', err)
+        const msg = err instanceof Error ? err.message : 'Unknown error'
+        setError(msg)
       } finally {
         setLoading(false)
       }
@@ -67,109 +72,88 @@ export const VocabSetDetailModal: React.FC<VocabSetDetailModalProps> = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="max-w-4xl max-h-[90vh] flex flex-col p-0 border border-slate-800 bg-[#121829] text-slate-100 shadow-2xl overflow-hidden">
-        {/* Modal Header */}
-        <DialogHeader className="flex flex-row items-center justify-between border-b border-slate-800/80 p-5 bg-[#161c2e] text-left">
+      <DialogContent className="max-w-4xl max-h-[90vh] flex flex-col p-0 gap-0 overflow-hidden">
+        <DialogHeader className="flex flex-row items-center justify-between border-b p-5 text-left">
           <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-500/10 text-emerald-400">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
               <BookOpen className="h-5 w-5" />
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <DialogTitle className="text-lg font-bold text-white">{deck.title}</DialogTitle>
+                <DialogTitle className="text-lg font-bold">{deck.title}</DialogTitle>
                 <HskBadge level={deck.hskLevel} />
               </div>
-              <DialogDescription className="text-xs text-slate-400 mt-0.5">
-                Danh sách {words.length} / {deck.totalWords} từ vựng HSK 3.0
+              <DialogDescription className="text-xs mt-0.5">
+                {loading ? 'Dang tai...' : `Danh sach ${words.length} / ${deck.totalWords} tu vung HSK 3.0`}
               </DialogDescription>
             </div>
           </div>
         </DialogHeader>
 
-        {/* Modal Control Bar (Search & Actions) */}
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between px-5 py-3 border-b border-slate-800/60 bg-[#141a2a]">
-          {/* Internal Word Search */}
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between px-5 py-3 border-b bg-muted/30">
           <div className="relative flex-1 max-w-sm">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Tìm từ trong bài này (Pinyin, Chữ Hán, Nghĩa)..."
-              className="w-full rounded-xl border border-slate-800 bg-[#1a2238] py-1.5 pl-9 pr-3 text-xs text-slate-200 placeholder:text-slate-500 focus-visible:ring-emerald-500"
+              placeholder="Tim tu (Pinyin, Chu Han, Nghia)..."
+              className="w-full pl-9"
             />
           </div>
-
-          {/* Action Button */}
-          <Button
-            onClick={() => onStartLearn?.(deck.id)}
-            className="bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold rounded-xl px-5 flex items-center gap-2 shadow-lg shadow-emerald-500/20 active:scale-95"
-          >
-            <Sparkles className="h-4 w-4" />
-            <span>BẮT ĐẦU HỌC TỪ MỚI</span>
+          <Button onClick={() => onStartLearn?.(deck.id)} disabled={words.length === 0}>
+            <Sparkles className="h-4 w-4 mr-2" />
+            <span>BAT DAU HOC TU MOI</span>
           </Button>
         </div>
 
-        {/* Modal Content: Word List Table */}
         <div className="flex-1 overflow-y-auto p-5">
           {loading ? (
-            <div className="flex items-center justify-center py-16 text-emerald-400">
+            <div className="flex items-center justify-center py-16 text-primary">
               <Loader2 className="h-7 w-7 animate-spin" />
-              <span className="ml-3 text-sm font-semibold">Đang tải danh sách từ vựng...</span>
+              <span className="ml-3 text-sm font-semibold">Dang tai danh sach tu vung...</span>
+            </div>
+          ) : error ? (
+            <div className="flex flex-col items-center justify-center py-12 text-center text-destructive">
+              <p className="text-sm font-semibold">Loi tai du lieu</p>
+              <p className="text-xs mt-1 text-muted-foreground">{error}</p>
+              <Button variant="outline" size="sm" className="mt-3" onClick={() => setSearchQuery('')}>
+                Thu lai
+              </Button>
             </div>
           ) : words.length > 0 ? (
             <div className="flex flex-col gap-2.5">
               {words.map((w, idx) => (
                 <div
                   key={w._id || idx}
-                  className="flex items-center justify-between rounded-xl border border-slate-800/80 bg-[#161c2e] p-3.5 transition-all hover:border-slate-700 hover:bg-[#1a2238]"
+                  className="flex items-center justify-between rounded-xl border bg-card p-3.5 transition-all hover:bg-accent/50"
                 >
                   <div className="flex items-center gap-4">
-                    <span className="text-xs font-bold text-slate-500 w-6 text-center">
+                    <span className="text-xs font-bold text-muted-foreground w-6 text-center shrink-0">
                       {(deck.page - 1) * deck.limit + idx + 1}
                     </span>
-
-                    {/* Chinese Character & Pinyin */}
                     <div className="flex flex-col">
                       <div className="flex items-baseline gap-2">
-                        <span className="text-xl font-black text-white tracking-wide">
-                          {w.simplified}
-                        </span>
+                        <span className="text-xl font-black tracking-wide">{w.simplified}</span>
                         {w.traditional && w.traditional !== w.simplified && (
-                          <span className="text-xs font-medium text-slate-500">
+                          <span className="text-xs font-medium text-muted-foreground">
                             ({w.traditional})
                           </span>
                         )}
-                        <span className="text-sm font-semibold text-emerald-400">
-                          [{w.pinyin}]
-                        </span>
+                        <span className="text-sm font-semibold text-primary">[{w.pinyin}]</span>
                       </div>
-
-                      {/* Meanings */}
-                      <p className="text-xs font-medium text-slate-300 mt-0.5 line-clamp-1">
+                      <p className="text-xs text-muted-foreground mt-0.5 line-clamp-1">
                         {w.meanings.join(', ')}
                       </p>
                     </div>
                   </div>
-
-                  {/* Right Actions: Audio button & Radical badge */}
-                  <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-3 shrink-0">
                     {w.radical && (
-                      <Badge
-                        variant="secondary"
-                        className="hidden sm:inline-flex bg-slate-800 text-slate-400 font-medium text-[11px] px-2 py-0.5 rounded-md"
-                      >
-                        Bộ: {w.radical}
+                      <Badge variant="outline" className="hidden sm:inline-flex text-muted-foreground">
+                        Bo: {w.radical}
                       </Badge>
                     )}
-
-                    <Button
-                      variant="ghost"
-                      size="icon-sm"
-                      onClick={() => playAudio(w.simplified)}
-                      className="rounded-xl bg-slate-800 text-slate-300 hover:bg-emerald-500/20 hover:text-emerald-400 transition-colors"
-                      title="Nghe phát âm"
-                    >
+                    <Button variant="ghost" size="icon" onClick={() => playAudio(w.simplified)} title="Nghe phat am">
                       <Volume2 className="h-4 w-4" />
                     </Button>
                   </div>
@@ -177,26 +161,28 @@ export const VocabSetDetailModal: React.FC<VocabSetDetailModalProps> = ({
               ))}
             </div>
           ) : (
-            <div className="flex flex-col items-center justify-center py-12 text-center text-slate-400">
-              <p className="text-sm font-semibold">Không tìm thấy từ vựng nào</p>
+            <div className="flex flex-col items-center justify-center py-16 text-center text-muted-foreground">
+              <BookOpen className="h-10 w-10 mb-2 opacity-50" />
+              <p className="text-sm font-semibold">Khong tim thay tu vung</p>
+              <p className="text-xs mt-1">
+                {searchQuery ? 'Thu tu khoa khac' : 'Bo bai nay chua co du lieu'}
+              </p>
+              {searchQuery && (
+                <Button variant="link" size="sm" className="mt-2" onClick={() => setSearchQuery('')}>
+                  Xoa bo loc
+                </Button>
+              )}
             </div>
           )}
         </div>
 
-        {/* Modal Footer */}
-        <div className="flex items-center justify-between border-t border-slate-800/80 px-5 py-3 bg-[#161c2e] text-xs text-slate-400">
+        <div className="flex items-center justify-between border-t px-5 py-3 bg-muted/30 text-xs text-muted-foreground">
           <div className="flex items-center gap-1.5">
-            <CheckCircle2 className="h-4 w-4 text-emerald-400" />
-            <span>Dữ liệu chuẩn HSK 3.0 Hanban</span>
+            <CheckCircle2 className="h-4 w-4 text-primary" />
+            <span>Du lieu chuan HSK 3.0</span>
           </div>
-
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={onClose}
-            className="rounded-xl border border-slate-700 text-slate-300 hover:bg-slate-800 transition-colors"
-          >
-            Đóng
+          <Button variant="ghost" size="sm" onClick={onClose}>
+            Dong
           </Button>
         </div>
       </DialogContent>
