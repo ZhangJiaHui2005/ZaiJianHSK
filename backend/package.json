@@ -1,10 +1,11 @@
 {
   "name": "backend",
   "version": "1.0.0",
+  "type": "module",
   "description": "Express.js TypeScript backend for ZaiJianHSK",
   "main": "dist/index.js",
   "scripts": {
-    "dev": "ts-node-dev --respawn --transpile-only src/index.ts",
+    "dev": "tsx watch src/index.ts",
     "build": "tsc",
     "start": "node dist/index.js"
   },
@@ -18,7 +19,8 @@
     "@types/cors": "^2.8.17",
     "@types/express": "^5.0.0",
     "@types/node": "^22.5.0",
-    "ts-node-dev": "^2.0.0",
+    "tsx": "^4.19.0",
     "typescript": "^5.5.4"
   }
 }
+
