@@ -1,50 +1,26 @@
-import { Outlet, Link, useLocation } from "react-router-dom"
-import { useUser, SignedIn, SignedOut, SignInButton, UserButton } from "@clerk/clerk-react"
-import { Button } from "@/components/ui/button"
+import { useState } from 'react'
+import { Outlet } from 'react-router-dom'
+import { AppSidebar } from '@/components/layout/AppSidebar'
+import { TopHeader } from '@/components/layout/TopHeader'
 
 export default function UserLayout() {
-  const { user } = useUser()
-  const location = useLocation()
+  const [searchQuery, setSearchQuery] = useState('')
 
   return (
-    <div className="flex min-h-svh flex-col">
-      {/* Navbar */}
-      <header className="flex items-center justify-between border-b px-6 py-3">
-        <div className="flex items-center gap-6">
-          <Link to="/" className="text-lg font-semibold">
-            ZaiJianHSK
-          </Link>
-          <nav className="flex items-center gap-4 text-sm">
-          <Link
-            to="/user"
-            className={`transition-colors hover:text-foreground ${
-              location.pathname === "/user" ? "text-foreground font-medium" : "text-muted-foreground"
-            }`}
-          >
-            Dashboard
-          </Link>
-          </nav>
-        </div>
-        <div className="flex items-center gap-3">
-          <SignedOut>
-            <SignInButton mode="modal">
-              <Button size="sm">Sign In</Button>
-            </SignInButton>
-          </SignedOut>
-          <SignedIn>
-            <span className="text-sm text-muted-foreground">
-              {user?.username || user?.firstName || "User"}
-            </span>
-            <UserButton />
-          </SignedIn>
-        </div>
-      </header>
+    <div className="flex min-h-screen bg-[#0e1322] text-slate-100 font-sans antialiased">
+      {/* Fixed Left Sidebar */}
+      <AppSidebar />
 
-      {/* Content */}
-      <main className="flex-1 p-6">
-        <Outlet />
-      </main>
+      {/* Main Content Area */}
+      <div className="flex flex-1 flex-col min-w-0">
+        {/* Top Navigation Header */}
+        <TopHeader searchQuery={searchQuery} onSearchChange={setSearchQuery} />
+
+        {/* Dynamic Route Outlet */}
+        <main className="flex-1 p-6 lg:p-8">
+          <Outlet context={{ searchQuery }} />
+        </main>
+      </div>
     </div>
   )
 }
-

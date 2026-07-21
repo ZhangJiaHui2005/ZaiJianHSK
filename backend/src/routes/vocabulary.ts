@@ -107,11 +107,9 @@ router.patch(
       }
 
       if (pending.status !== "pending") {
-        return res
-          .status(400)
-          .json({
-            error: `This submission has already been ${pending.status}`,
-          });
+        return res.status(400).json({
+          error: `This submission has already been ${pending.status}`,
+        });
       }
 
       // Clone into Vocabulary collection
@@ -168,11 +166,9 @@ router.patch(
       }
 
       if (pending.status !== "pending") {
-        return res
-          .status(400)
-          .json({
-            error: `This submission has already been ${pending.status}`,
-          });
+        return res.status(400).json({
+          error: `This submission has already been ${pending.status}`,
+        });
       }
 
       pending.status = "rejected";

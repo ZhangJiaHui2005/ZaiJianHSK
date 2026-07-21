@@ -113,5 +113,35 @@ router.patch('/:clerkId/role', async (req: Request, res: Response) => {
   }
 });
 
+// DELETE /api/users/delete/:clerkId - Xoá user theo clerkId (admin)
+router.delete('/delete/:clerkId', async (req: Request, res: Response) => {
+  try {
+    const { clerkId } = req.params;
+
+    const user = await User.findOneAndDelete({ clerkId });
+
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    console.log(`✅ User deleted: ${user.username} (${user.email})`);
+    return res.status(200).json({
+      message: 'User deleted successfully',
+      user: {
+        _id: user._id,
+        clerkId: user.clerkId,
+        username: user.username,
+        email: user.email,
+      },
+    });
+  } catch (error) {
+    if (error instanceof Error) {
+      console.error('Error deleting user:', error.message);
+      return res.status(500).json({ error: error.message });
+    }
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 export default router;
 
