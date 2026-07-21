@@ -4,6 +4,7 @@ export interface IUser extends Document {
   clerkId: string;
   username: string;
   email: string;
+  role: 'admin' | 'moderator' | 'user';
   createdAt: Date;
   updatedAt: Date;
 }
@@ -32,6 +33,11 @@ const UserSchema: Schema = new Schema(
       lowercase: true,
       match: [/^[\w-]+(\.[\w-]+)*@([\w-]+\.)+[a-zA-Z]{2,7}$/, 'Please provide a valid email'],
     },
+    role: {
+      type: String,
+      enum: ['admin', 'moderator', 'user'],
+      default: 'user',
+    }
   },
   {
     timestamps: true,
