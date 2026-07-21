@@ -1,7 +1,41 @@
-import { SignedIn, SignedOut, SignInButton, UserButton } from "@clerk/clerk-react"
+import { useUser, SignedIn, SignedOut, SignInButton, UserButton } from "@clerk/clerk-react"
+import { useEffect, useState } from "react"
 import { Button } from "./components/ui/button"
+import { syncUserToDB } from "./lib/api"
 
 export function App() {
+  const { user } = useUser()
+  const [syncing, setSyncing] = useState(false)
+
+  // Đồng bộ user lên MongoDB khi đăng nhập Clerk thành công
+  useEffect(() => {
+    if (!user || syncing) return
+
+    const syncUser = async () => {
+      setSyncing(true)
+      try {
+        const email = user.primaryEmailAddress?.emailAddress
+        if (!email) {
+          console.warn("User has no email address")
+          return
+        }
+
+        const result = await syncUserToDB({
+          clerkId: user.id,
+          username: user.username,
+          email,
+        })
+        console.log("✅ User synced to MongoDB:", result.message)
+      } catch (error) {
+        console.error("❌ Failed to sync user:", error)
+      } finally {
+        setSyncing(false)
+      }
+    }
+
+    syncUser()
+  }, [user])
+
   return (
     <div className="flex min-h-svh p-6">
       <div className="flex max-w-md min-w-0 flex-col gap-4 text-sm leading-loose">
@@ -24,10 +58,10 @@ export function App() {
 
         <SignedIn>
           <div>
-            <h1 className="font-medium">Project ready!</h1>
-            <p>You may now add components and start building.</p>
-            <p>We&apos;ve already added the button component for you.</p>
-            <Button className="mt-2">Button</Button>
+            <h1 className="font-medium">Welcome, {user?.username || user?.firstName || "User"}!</h1>
+            <p className="mt-1 text-muted-foreground">
+              {syncing ? "Syncing to database..." : "✅ User data saved to MongoDB"}
+            </p>
           </div>
         </SignedIn>
 
