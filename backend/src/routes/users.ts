@@ -32,7 +32,7 @@ router.post('/', async (req: Request, res: Response) => {
       email,
     });
 
-    console.log(`✅ User created: ${newUser.username} (${newUser.email})`);
+    console.log(`✅ User created: ${newUser.username} (${newUser.email}) role: ${newUser.role}`);
     return res.status(201).json({
       message: 'User created successfully',
       user: newUser,
@@ -40,6 +40,19 @@ router.post('/', async (req: Request, res: Response) => {
   } catch (error) {
     if (error instanceof Error) {
       console.error('Error creating user:', error.message);
+      return res.status(500).json({ error: error.message });
+    }
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// GET /api/users - Lấy danh sách tất cả users (admin)
+router.get('/', async (req: Request, res: Response) => {
+  try {
+    const users = await User.find({}).sort({ createdAt: -1 });
+    return res.status(200).json({ users });
+  } catch (error) {
+    if (error instanceof Error) {
       return res.status(500).json({ error: error.message });
     }
     return res.status(500).json({ error: 'Internal server error' });
@@ -58,6 +71,40 @@ router.get('/:clerkId', async (req: Request, res: Response) => {
     }
 
     return res.status(200).json({ user });
+  } catch (error) {
+    if (error instanceof Error) {
+      return res.status(500).json({ error: error.message });
+    }
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// PATCH /api/users/:clerkId/role - Cập nhật role user (admin)
+router.patch('/:clerkId/role', async (req: Request, res: Response) => {
+  try {
+    const { clerkId } = req.params;
+    const { role } = req.body;
+
+    const validRoles = ['admin', 'moderator', 'user'];
+    if (!validRoles.includes(role)) {
+      return res.status(400).json({ error: `Invalid role. Must be one of: ${validRoles.join(', ')}` });
+    }
+
+    const user = await User.findOneAndUpdate(
+      { clerkId },
+      { role },
+      { new: true }
+    );
+
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    console.log(`✅ Role updated: ${user.username} -> ${role}`);
+    return res.status(200).json({
+      message: 'Role updated successfully',
+      user,
+    });
   } catch (error) {
     if (error instanceof Error) {
       return res.status(500).json({ error: error.message });
