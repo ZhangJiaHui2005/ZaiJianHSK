@@ -1,9 +1,7 @@
 import mongoose from 'mongoose';
-import dotenv from 'dotenv';
+import '../config/loadEnv.js';
 import Vocabulary from '../models/Vocabulary.js';
 import Deck from '../models/Deck.js';
-
-dotenv.config();
 
 const MAX_WORDS_PER_DECK = 250;
 

@@ -1,5 +1,5 @@
 import { type ReactNode, useEffect, useState } from "react"
-import { useUser } from "@clerk/clerk-react"
+import { useAuth, useUser } from "@clerk/clerk-react"
 import { getUserByClerkId } from "@/lib/api"
 import {
   getPendingVocabulary,
@@ -83,6 +83,7 @@ const statusIcon: Record<string, ReactNode> = {
 
 export default function AdminPendingVocabulary() {
   const { user, isLoaded, isSignedIn } = useUser()
+  const { getToken } = useAuth()
   const [submissions, setSubmissions] = useState<PendingVocab[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -103,13 +104,17 @@ export default function AdminPendingVocabulary() {
     if (!isLoaded || !isSignedIn || !user) return
     setLoading(true)
     setError(null)
+
+    const token = await getToken();
+    if (!token) return;
+
     try {
-      const currentUser = await getUserByClerkId(user.id)
+      const currentUser = await getUserByClerkId(user.id, token);
       if (!currentUser || (currentUser as any).role !== "admin") {
         setError("Access denied. Admin role required.")
         return
       }
-      const data = await getPendingVocabulary(user.id, {
+      const data = await getPendingVocabulary(token, {
         status: statusFilter,
         page,
         limit: 20,
@@ -126,7 +131,7 @@ export default function AdminPendingVocabulary() {
 
   useEffect(() => {
     fetchSubmissions()
-  }, [user, isLoaded, isSignedIn, statusFilter, page])
+  }, [user, isLoaded, isSignedIn, statusFilter, page, getToken])
 
   // Fetch available decks when selectedLevels change in approve dialog
   useEffect(() => {
@@ -179,11 +184,13 @@ export default function AdminPendingVocabulary() {
 
   const handleConfirmApprove = async () => {
     if (!user || !approveTarget) return
+    const token = await getToken()
+    if (!token) return
     setActionLoading(approveTarget._id)
     setIsApproveDialogOpen(false)
     try {
       await approvePendingVocabulary(
-        user.id,
+        token,
         approveTarget._id,
         selectedLevels.length > 0 ? selectedLevels : undefined,
         selectedDeckIds.length > 0 ? selectedDeckIds : undefined
@@ -199,6 +206,8 @@ export default function AdminPendingVocabulary() {
 
   const handleReject = async (pendingId: string) => {
     if (!user) return
+    const token = await getToken()
+    if (!token) return
     const notes = rejectNotes[pendingId] || ""
     if (!notes.trim()) {
       alert("Please provide a reason for rejection.")
@@ -206,7 +215,7 @@ export default function AdminPendingVocabulary() {
     }
     setActionLoading(pendingId)
     try {
-      await rejectPendingVocabulary(user.id, pendingId, notes)
+      await rejectPendingVocabulary(token, pendingId, notes)
       setRejectNotes((prev) => ({ ...prev, [pendingId]: "" }))
       await fetchSubmissions()
     } catch (err) {
@@ -218,6 +227,8 @@ export default function AdminPendingVocabulary() {
 
   const handlePermanentDelete = async (pendingId: string) => {
     if (!user) return
+    const token = await getToken()
+    if (!token) return
     if (
       !window.confirm(
         "Are you sure you want to permanently delete this submission? This action cannot be undone."
@@ -226,7 +237,7 @@ export default function AdminPendingVocabulary() {
       return
     setActionLoading(pendingId)
     try {
-      await permanentDeletePendingVocabulary(user.id, pendingId)
+      await permanentDeletePendingVocabulary(token, pendingId)
       await fetchSubmissions()
     } catch (err) {
       console.error(err)

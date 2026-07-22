@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react"
-import { useUser } from "@clerk/clerk-react"
+import { useAuth, useUser } from "@clerk/clerk-react"
 import { getUserByClerkId } from "@/lib/api"
 import {
   Card,
@@ -18,8 +18,14 @@ export default function AdminDashboard() {
   useEffect(() => {
     if (!isLoaded || !isSignedIn || !user) return
     const fetchRole = async () => {
+
+    const { getToken } = useAuth();
+    const token = await getToken();
+
+    if (!token) return;
+
       try {
-        const data = await getUserByClerkId(user.id)
+        const data = await getUserByClerkId(user.id, token)
         if (data) {
           setUserRole((data as any).role || "user")
         }

@@ -1,20 +1,14 @@
-# Task: Fix Vocabulary Modal & Convert to shadcn
+# Fix Admin Access Bug - TODO ✅
+
+## Problem
+`getUserByClerkId()` requires 2 params: `(clerkId, token)` but was being called with only 1 param in multiple files, causing admin access checks to fail.
 
 ## Steps
 
-### Fix: Modal không hiện từ
-- [x] Step 1: Fix VocabSetDetailModal.tsx - thêm error state, log lỗi rõ, loading
-- [x] Step 2: Test modal with backend running
-
-### Chuyển sang shadcn
-- [x] Step 3: UserLayout.tsx - shadcn
-- [x] Step 4: AppSidebar.tsx - shadcn 
-- [x] Step 5: TopHeader.tsx - shadcn
-- [x] Step 6: VocabularyLibrary.tsx - shadcn + Select component
-- [x] Step 7: VocabFolderCard.tsx - shadcn
-- [x] Step 8: VocabSetCard.tsx - shadcn
-- [x] Step 9: VocabSetDetailModal.tsx - shadcn
-- [x] Step 10: UserDashboard.tsx - shadcn Card
-- [x] Step 11: Dashboard.tsx - shadcn Card
-- [x] Step 12: Build test
+- [x] 1. Analyze code and identify all files with the bug
+- [x] 2. Confirm plan with user
+- [x] 3. Fix `frontend/src/layouts/AdminLayout.tsx` - Add `useAuth()`, get token, pass to `getUserByClerkId`
+- [x] 4. Fix `frontend/src/pages/admin/PendingVocabulary.tsx` - Add `useAuth()`, get token, pass to all API calls
+- [x] 5. Fix `frontend/src/pages/admin/Users.tsx` - Remove duplicate `useAuth()` call inside function body, add missing auth headers to API calls
+- [x] 6. **All fixes applied successfully**
 

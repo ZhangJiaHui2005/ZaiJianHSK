@@ -1,7 +1,13 @@
 import { Router, Request, Response } from 'express';
-import User from '../models/Users.js';
+import { createClerkClient } from '@clerk/backend';
+import User from '../models/Users';
+import { requireAdmin, requireSelfOrAdmin } from '../middleware/auth';
 
 const router = Router();
+
+const clerkClient = createClerkClient({
+  secretKey: process.env.CLERK_SECRET_KEY || '',
+});
 
 // POST /api/users - Tạo user mới (gọi từ frontend sau khi Clerk login)
 router.post('/', async (req: Request, res: Response) => {
@@ -47,7 +53,7 @@ router.post('/', async (req: Request, res: Response) => {
 });
 
 // GET /api/users - Lấy danh sách tất cả users (admin)
-router.get('/', async (req: Request, res: Response) => {
+router.get('/', requireAdmin, async (req: Request, res: Response) => {
   try {
     const users = await User.find({}).sort({ createdAt: -1 });
     return res.status(200).json({ users });
@@ -60,7 +66,7 @@ router.get('/', async (req: Request, res: Response) => {
 });
 
 // GET /api/users/:clerkId - Lấy thông tin user theo clerkId
-router.get('/:clerkId', async (req: Request, res: Response) => {
+router.get('/:clerkId', requireSelfOrAdmin, async (req: Request, res: Response) => {
   try {
     const { clerkId } = req.params;
 
@@ -80,7 +86,7 @@ router.get('/:clerkId', async (req: Request, res: Response) => {
 });
 
 // PATCH /api/users/:clerkId/role - Cập nhật role user (admin)
-router.patch('/:clerkId/role', async (req: Request, res: Response) => {
+router.patch('/:clerkId/role', requireAdmin, async (req: Request, res: Response) => {
   try {
     const { clerkId } = req.params;
     const { role } = req.body;
@@ -113,20 +119,34 @@ router.patch('/:clerkId/role', async (req: Request, res: Response) => {
   }
 });
 
-// DELETE /api/users/delete/:clerkId - Xoá user theo clerkId (admin)
-router.delete('/delete/:clerkId', async (req: Request, res: Response) => {
+// DELETE /api/users/delete/:clerkId - Xoá user khỏi Clerk và MongoDB (admin)
+router.delete('/delete/:clerkId', requireAdmin, async (req: Request, res: Response) => {
   try {
     const { clerkId } = req.params;
 
+    // Xoá user trên Clerk dashboard trước
+    try {
+      await clerkClient.users.deleteUser(clerkId);
+      console.log(`✅ Clerk user deleted: ${clerkId}`);
+    } catch (clerkError: any) {
+      // Nếu Clerk trả về lỗi "not found" thì vẫn tiếp tục xoá MongoDB
+      if (clerkError?.status === 404) {
+        console.warn(`⚠️ Clerk user not found (${clerkId}), proceeding with MongoDB delete`);
+      } else {
+        throw clerkError;
+      }
+    }
+
+    // Xoá user trong MongoDB
     const user = await User.findOneAndDelete({ clerkId });
 
     if (!user) {
       return res.status(404).json({ error: 'User not found' });
     }
 
-    console.log(`✅ User deleted: ${user.username} (${user.email})`);
+    console.log(`✅ User deleted from both Clerk and MongoDB: ${user.username} (${user.email})`);
     return res.status(200).json({
-      message: 'User deleted successfully',
+      message: 'User deleted successfully from Clerk and database',
       user: {
         _id: user._id,
         clerkId: user.clerkId,

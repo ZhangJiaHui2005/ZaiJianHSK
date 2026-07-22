@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react"
-import { useUser } from "@clerk/clerk-react"
+import { useAuth, useUser } from "@clerk/clerk-react"
 import { getUserByClerkId, deleteUser } from "@/lib/api"
 import {
   Card,
@@ -56,6 +56,7 @@ const roleTabs = [
 type RoleTab = (typeof roleTabs)[number]["key"]
 
 export default function AdminUsers() {
+  const { getToken } = useAuth();
   const { user, isLoaded, isSignedIn } = useUser()
   const [users, setUsers] = useState<UserData[]>([])
   const [loading, setLoading] = useState(true)
@@ -69,14 +70,20 @@ export default function AdminUsers() {
     if (!isLoaded || !isSignedIn || !user) return
     setLoading(true)
     setError(null)
+
+    const token = await getToken();
+    if (!token) return;
+
     try {
-      const currentUser = await getUserByClerkId(user.id)
+      const currentUser = await getUserByClerkId(user.id, token)
       if (!currentUser || (currentUser as any).role !== "admin") {
         setError("Access denied. Admin role required.")
         return
       }
 
-      const res = await fetch(`${API_BASE_URL}/api/users`)
+      const res = await fetch(`${API_BASE_URL}/api/users`, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
       if (!res.ok) throw new Error("Failed to fetch users")
       const data = await res.json()
       setUsers(data.users || [])
@@ -89,14 +96,19 @@ export default function AdminUsers() {
 
   useEffect(() => {
     fetchUsers()
-  }, [user, isLoaded, isSignedIn])
+  }, [user, isLoaded, isSignedIn, getToken])
 
   const updateUserRole = async (clerkId: string, newRole: string) => {
     setUpdatingId(clerkId)
+    const token = await getToken()
+    if (!token) return
     try {
       const res = await fetch(`${API_BASE_URL}/api/users/${clerkId}/role`, {
         method: "PATCH",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
         body: JSON.stringify({ role: newRole }),
       })
       if (!res.ok) throw new Error("Failed to update role")
@@ -115,8 +127,12 @@ export default function AdminUsers() {
     if (!confirmed) return
 
     setDeletingId(clerkId)
+
+    const token = await getToken();
+    if (!token) return
+
     try {
-      await deleteUser(clerkId)
+      await deleteUser(clerkId, token)
       await fetchUsers()
     } catch (err) {
       console.error(err)
@@ -135,10 +151,10 @@ export default function AdminUsers() {
   const query = searchQuery.toLowerCase().trim()
   const filteredUsers = query
     ? roleFiltered.filter(
-        (u) =>
-          u.username?.toLowerCase().includes(query) ||
-          u.email?.toLowerCase().includes(query)
-      )
+      (u) =>
+        u.username?.toLowerCase().includes(query) ||
+        u.email?.toLowerCase().includes(query)
+    )
     : roleFiltered
 
   // Count users per role for tab display
