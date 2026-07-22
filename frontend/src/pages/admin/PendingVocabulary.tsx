@@ -237,7 +237,7 @@ export default function AdminPendingVocabulary() {
                         </div>
                       </TableCell>
                       <TableCell className="text-muted-foreground">
-                        {s.userId?.username || "Unknown"}
+                        {(typeof s.userId === "object" && s.userId?.username) || "Unknown"}
                       </TableCell>
                       <TableCell>
                         <Badge
@@ -299,7 +299,7 @@ export default function AdminPendingVocabulary() {
                           </div>
                         ) : (
                           <span className="text-xs text-muted-foreground">
-                            {s.adminId?.username || "Admin"} on{" "}
+                            {(typeof s.adminId === "object" && s.adminId?.username) || "Admin"} on{" "}
                             {s.reviewedAt
                               ? new Date(s.reviewedAt).toLocaleDateString()
                               : "—"}

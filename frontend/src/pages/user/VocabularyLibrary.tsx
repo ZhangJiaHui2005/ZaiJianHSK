@@ -11,6 +11,14 @@ import { VocabFolderCard } from '@/components/vocabulary/VocabFolderCard'
 import { VocabSetCard } from '@/components/vocabulary/VocabSetCard'
 import { VocabSetDetailModal } from '@/components/vocabulary/VocabSetDetailModal'
 import { Button } from '@/components/ui/button'
+import { Card } from '@/components/ui/card'
+import {
+  Select,
+  SelectTrigger,
+  SelectValue,
+  SelectContent,
+  SelectItem,
+} from '@/components/ui/select'
 import type { VocabFolderItem, VocabSetItem } from '@/data/hskVocabData'
 
 interface VocabularyLibraryProps {
@@ -113,37 +121,33 @@ export const VocabularyLibrary: React.FC<VocabularyLibraryProps> = ({
   return (
     <div className="flex flex-col gap-6 max-w-7xl mx-auto pb-12">
       {/* Notice Banner */}
-      <div className="flex items-center justify-between rounded-xl border border-emerald-500/20 bg-emerald-950/20 px-5 py-3 text-sm text-emerald-200">
-        <div className="flex items-center gap-3">
-          <Sparkles className="h-5 w-5 text-emerald-400 shrink-0" />
+      <Card className="border border-primary/20 bg-primary/5 px-5 py-3 shadow-none">
+        <div className="flex items-center gap-3 text-sm text-foreground">
+          <Sparkles className="h-5 w-5 text-primary shrink-0" />
           <span>
             Thư viện tự động chia thành <strong>{totalDecksCount} bộ bài học HSK 3.0</strong>. Bấm vào bộ bài học để xem chi tiết từ vựng!
           </span>
         </div>
-      </div>
+      </Card>
 
       {/* Main Section Header */}
       <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between pt-2">
         <div>
-          <span className="text-xs font-bold tracking-wider text-emerald-400 uppercase">
+          <span className="text-xs font-bold tracking-wider text-primary uppercase">
             — KHÁM PHÁ HSK 3.0
           </span>
-          <h1 className="mt-1 text-3xl font-black tracking-tight text-white sm:text-4xl">
+          <h1 className="mt-1 text-3xl font-black tracking-tight text-foreground sm:text-4xl">
             Khám phá Thư viện HSK
           </h1>
         </div>
 
         {/* Practice Mode Selector Tabs */}
-        <div className="flex items-center gap-2 rounded-2xl border border-slate-800 bg-[#161c2e] p-1.5 shrink-0">
+        <div className="flex items-center gap-2 rounded-2xl border border-border bg-card p-1.5 shrink-0 shadow-sm">
           <Button
             type="button"
             variant={activeMode === 'vocab' ? 'default' : 'ghost'}
             onClick={() => setActiveMode('vocab')}
-            className={`rounded-xl px-4 py-2 text-xs font-bold transition-all ${
-              activeMode === 'vocab'
-                ? 'bg-emerald-500 text-slate-950 hover:bg-emerald-400 shadow-md shadow-emerald-500/20'
-                : 'text-slate-400 hover:text-slate-200'
-            }`}
+            className="rounded-xl px-4 py-2 text-xs font-bold transition-all"
           >
             <Languages className="h-4 w-4 mr-1.5" />
             <span>Từ vựng</span>
@@ -153,11 +157,7 @@ export const VocabularyLibrary: React.FC<VocabularyLibraryProps> = ({
             type="button"
             variant={activeMode === 'speaking' ? 'default' : 'ghost'}
             onClick={() => setActiveMode('speaking')}
-            className={`rounded-xl px-4 py-2 text-xs font-bold transition-all ${
-              activeMode === 'speaking'
-                ? 'bg-emerald-500 text-slate-950 hover:bg-emerald-400 shadow-md shadow-emerald-500/20'
-                : 'text-slate-400 hover:text-slate-200'
-            }`}
+            className="rounded-xl px-4 py-2 text-xs font-bold transition-all"
           >
             <Mic className="h-4 w-4 mr-1.5" />
             <span>Luyện Speaking</span>
@@ -167,11 +167,7 @@ export const VocabularyLibrary: React.FC<VocabularyLibraryProps> = ({
             type="button"
             variant={activeMode === 'writing' ? 'default' : 'ghost'}
             onClick={() => setActiveMode('writing')}
-            className={`rounded-xl px-4 py-2 text-xs font-bold transition-all ${
-              activeMode === 'writing'
-                ? 'bg-emerald-500 text-slate-950 hover:bg-emerald-400 shadow-md shadow-emerald-500/20'
-                : 'text-slate-400 hover:text-slate-200'
-            }`}
+            className="rounded-xl px-4 py-2 text-xs font-bold transition-all"
           >
             <PenTool className="h-4 w-4 mr-1.5" />
             <span>Luyện Hán tự</span>
@@ -180,7 +176,7 @@ export const VocabularyLibrary: React.FC<VocabularyLibraryProps> = ({
       </div>
 
       {/* Category Pills & Status Filter Row */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between border-y border-slate-800/80 py-4">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between border-y border-border py-4">
         {/* HSK 3.0 Filter Pills */}
         <div className="flex flex-wrap items-center gap-2 overflow-x-auto pb-1 sm:pb-0">
           {categories.map((cat) => {
@@ -189,17 +185,13 @@ export const VocabularyLibrary: React.FC<VocabularyLibraryProps> = ({
               <Button
                 key={cat.id}
                 type="button"
-                variant={isActive ? 'outline' : 'secondary'}
+                variant={isActive ? 'default' : 'outline'}
                 onClick={() => setActiveCategory(cat.id)}
-                className={`rounded-full px-4 py-2 text-xs font-bold transition-all whitespace-nowrap h-auto ${
-                  isActive
-                    ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/40 shadow-sm'
-                    : 'bg-[#161c2e] text-slate-400 border border-slate-800 hover:border-slate-700 hover:text-slate-200'
-                }`}
+                className="rounded-full px-4 py-2 text-xs font-bold transition-all whitespace-nowrap h-auto"
               >
                 <span>{cat.label}</span>
                 {cat.count !== undefined && (
-                  <span className="ml-1 text-[10px] opacity-75">({cat.count})</span>
+                  <span className="ml-1 text-[10px] opacity-80">({cat.count})</span>
                 )}
               </Button>
             )
@@ -208,23 +200,29 @@ export const VocabularyLibrary: React.FC<VocabularyLibraryProps> = ({
 
         {/* Status Filter Dropdown */}
         <div className="flex items-center gap-2 shrink-0">
-          <SlidersHorizontal className="h-4 w-4 text-slate-400" />
-          <span className="text-xs font-medium text-slate-400">Lọc:</span>
-          <select
+          <SlidersHorizontal className="h-4 w-4 text-muted-foreground" />
+          <span className="text-xs font-medium text-muted-foreground">Lọc:</span>
+          <Select
             value={filterStatus}
-            onChange={(e) => setFilterStatus(e.target.value as 'all' | 'saved' | 'unlearned')}
-            className="rounded-xl border border-slate-800 bg-[#161c2e] px-3 py-1.5 text-xs font-bold text-slate-200 focus:border-emerald-500 focus:outline-none"
+            onValueChange={(val: string | null) => {
+              if (val) setFilterStatus(val as 'all' | 'saved' | 'unlearned')
+            }}
           >
-            <option value="all">Tất cả các bộ</option>
-            <option value="saved">Đã lưu (Bookmark)</option>
-            <option value="unlearned">Chưa hoàn thành</option>
-          </select>
+            <SelectTrigger className="w-44 h-9 rounded-xl text-xs font-bold">
+              <SelectValue placeholder="Tất cả các bộ" />
+            </SelectTrigger>
+            <SelectContent align="end">
+              <SelectItem value="all">Tất cả các bộ</SelectItem>
+              <SelectItem value="saved">Đã lưu (Bookmark)</SelectItem>
+              <SelectItem value="unlearned">Chưa hoàn thành</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
       </div>
 
       {/* Loading Indicator */}
       {loading && (
-        <div className="flex items-center justify-center py-16 text-emerald-400">
+        <div className="flex items-center justify-center py-16 text-primary">
           <Loader2 className="h-8 w-8 animate-spin" />
           <span className="ml-3 text-sm font-semibold">Đang tải danh sách các bộ bài học HSK...</span>
         </div>
@@ -232,7 +230,7 @@ export const VocabularyLibrary: React.FC<VocabularyLibraryProps> = ({
 
       {/* Error Message */}
       {error && !loading && (
-        <div className="rounded-xl border border-rose-500/30 bg-rose-950/20 p-4 text-sm text-rose-300">
+        <div className="rounded-xl border border-destructive/30 bg-destructive/10 p-4 text-sm text-destructive">
           {error}
         </div>
       )}

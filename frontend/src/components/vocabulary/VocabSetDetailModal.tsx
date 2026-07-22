@@ -47,10 +47,10 @@ export const VocabSetDetailModal: React.FC<VocabSetDetailModalProps> = ({
         if (res.success) {
           setWords(res.words)
         } else {
-          setError('API tra ve loi')
+          setError('API trả về lỗi')
         }
       } catch (err) {
-        const msg = err instanceof Error ? err.message : 'Unknown error'
+        const msg = err instanceof Error ? err.message : 'Lỗi không xác định'
         setError(msg)
       } finally {
         setLoading(false)
@@ -84,7 +84,7 @@ export const VocabSetDetailModal: React.FC<VocabSetDetailModalProps> = ({
                 <HskBadge level={deck.hskLevel} />
               </div>
               <DialogDescription className="text-xs mt-0.5">
-                {loading ? 'Dang tai...' : `Danh sach ${words.length} / ${deck.totalWords} tu vung HSK 3.0`}
+                {loading ? 'Đang tải...' : `Danh sách ${words.length} / ${deck.totalWords} từ vựng HSK 3.0`}
               </DialogDescription>
             </div>
           </div>
@@ -97,13 +97,13 @@ export const VocabSetDetailModal: React.FC<VocabSetDetailModalProps> = ({
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Tim tu (Pinyin, Chu Han, Nghia)..."
+              placeholder="Tìm từ (Pinyin, Chữ Hán, Nghĩa)..."
               className="w-full pl-9"
             />
           </div>
           <Button onClick={() => onStartLearn?.(deck.id)} disabled={words.length === 0}>
             <Sparkles className="h-4 w-4 mr-2" />
-            <span>BAT DAU HOC TU MOI</span>
+            <span>BẮT ĐẦU HỌC TỪ MỚI</span>
           </Button>
         </div>
 
@@ -111,14 +111,14 @@ export const VocabSetDetailModal: React.FC<VocabSetDetailModalProps> = ({
           {loading ? (
             <div className="flex items-center justify-center py-16 text-primary">
               <Loader2 className="h-7 w-7 animate-spin" />
-              <span className="ml-3 text-sm font-semibold">Dang tai danh sach tu vung...</span>
+              <span className="ml-3 text-sm font-semibold">Đang tải danh sách từ vựng...</span>
             </div>
           ) : error ? (
             <div className="flex flex-col items-center justify-center py-12 text-center text-destructive">
-              <p className="text-sm font-semibold">Loi tai du lieu</p>
+              <p className="text-sm font-semibold">Lỗi tải dữ liệu</p>
               <p className="text-xs mt-1 text-muted-foreground">{error}</p>
               <Button variant="outline" size="sm" className="mt-3" onClick={() => setSearchQuery('')}>
-                Thu lai
+                Thử lại
               </Button>
             </div>
           ) : words.length > 0 ? (
@@ -150,10 +150,10 @@ export const VocabSetDetailModal: React.FC<VocabSetDetailModalProps> = ({
                   <div className="flex items-center gap-3 shrink-0">
                     {w.radical && (
                       <Badge variant="outline" className="hidden sm:inline-flex text-muted-foreground">
-                        Bo: {w.radical}
+                        Bộ: {w.radical}
                       </Badge>
                     )}
-                    <Button variant="ghost" size="icon" onClick={() => playAudio(w.simplified)} title="Nghe phat am">
+                    <Button variant="ghost" size="icon" onClick={() => playAudio(w.simplified)} title="Nghe phát âm">
                       <Volume2 className="h-4 w-4" />
                     </Button>
                   </div>
@@ -163,13 +163,13 @@ export const VocabSetDetailModal: React.FC<VocabSetDetailModalProps> = ({
           ) : (
             <div className="flex flex-col items-center justify-center py-16 text-center text-muted-foreground">
               <BookOpen className="h-10 w-10 mb-2 opacity-50" />
-              <p className="text-sm font-semibold">Khong tim thay tu vung</p>
+              <p className="text-sm font-semibold">Không tìm thấy từ vựng</p>
               <p className="text-xs mt-1">
-                {searchQuery ? 'Thu tu khoa khac' : 'Bo bai nay chua co du lieu'}
+                {searchQuery ? 'Thử từ khóa khác' : 'Bộ bài này chưa có dữ liệu'}
               </p>
               {searchQuery && (
                 <Button variant="link" size="sm" className="mt-2" onClick={() => setSearchQuery('')}>
-                  Xoa bo loc
+                  Xóa bộ lọc
                 </Button>
               )}
             </div>
@@ -179,10 +179,10 @@ export const VocabSetDetailModal: React.FC<VocabSetDetailModalProps> = ({
         <div className="flex items-center justify-between border-t px-5 py-3 bg-muted/30 text-xs text-muted-foreground">
           <div className="flex items-center gap-1.5">
             <CheckCircle2 className="h-4 w-4 text-primary" />
-            <span>Du lieu chuan HSK 3.0</span>
+            <span>Dữ liệu chuẩn HSK 3.0</span>
           </div>
           <Button variant="ghost" size="sm" onClick={onClose}>
-            Dong
+            Đóng
           </Button>
         </div>
       </DialogContent>

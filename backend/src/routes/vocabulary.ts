@@ -5,7 +5,6 @@ import PendingVocabulary from "../models/PendingVocabulary.js";
 
 const router = Router();
 
-<<<<<<< Updated upstream
 // Middleware: check if user is admin
 const requireAdmin = async (req: Request, res: Response, next: Function) => {
   try {
@@ -32,7 +31,23 @@ const requireAdmin = async (req: Request, res: Response, next: Function) => {
     return res.status(500).json({ error: "Internal server error" });
   }
 };
-=======
+
+// Middleware: attach current user from header
+const attachUser = async (req: Request, res: Response, next: Function) => {
+  try {
+    const clerkId = req.headers["x-clerk-user-id"] as string;
+    if (clerkId) {
+      const user = await User.findOne({ clerkId });
+      if (user) {
+        (req as any).currentUser = user;
+      }
+    }
+    next();
+  } catch (error) {
+    next();
+  }
+};
+
 /**
  * Returns level values for MongoDB $elemMatch $in query
  * Supports both 'new-*' and 'newest-*' formats
@@ -60,46 +75,6 @@ function buildLevelQuery(levelValues: string[]): Record<string, any> {
   return { level: { $elemMatch: { $in: levelValues } } };
 }
 
-// GET /api/vocabulary/stats - Thống kê số lượng từ vựng theo từng cấp độ HSK 3.0
-router.get('/stats', async (_req: Request, res: Response) => {
-  try {
-    const pairs = [
-      { key: 'hsk1', levels: ['new-1', 'newest-1'] },
-      { key: 'hsk2', levels: ['new-2', 'newest-2'] },
-      { key: 'hsk3', levels: ['new-3', 'newest-3'] },
-      { key: 'hsk4', levels: ['new-4', 'newest-4'] },
-      { key: 'hsk5', levels: ['new-5', 'newest-5'] },
-      { key: 'hsk6', levels: ['new-6', 'newest-6'] },
-      { key: 'hsk7_9', levels: ['new-7', 'newest-7'] },
-    ];
-
-    const stats: Record<string, number> = {};
-
-    await Promise.all(
-      pairs.map(async ({ key, levels }) => {
-        const query = buildLevelQuery(levels);
-        const count = await Vocabulary.countDocuments(query);
-        stats[key] = count;
-      })
-    );
->>>>>>> Stashed changes
-
-// Middleware: attach current user from header
-const attachUser = async (req: Request, res: Response, next: Function) => {
-  try {
-    const clerkId = req.headers["x-clerk-user-id"] as string;
-    if (clerkId) {
-      const user = await User.findOne({ clerkId });
-      if (user) {
-        (req as any).currentUser = user;
-      }
-    }
-    next();
-  } catch (error) {
-    next();
-  }
-};
-
 // ==================== ADMIN ROUTES ====================
 
 // GET /api/vocabulary/pending - Admin lấy danh sách từ đang chờ duyệt
@@ -116,7 +91,7 @@ router.get("/pending", requireAdmin, async (req: Request, res: Response) => {
     ) {
       filter.status = status;
     } else {
-      filter.status = "pending"; // default: only pending
+      filter.status = "pending";
     }
 
     const total = await PendingVocabulary.countDocuments(filter);
@@ -248,42 +223,34 @@ router.patch(
 
 // ==================== PUBLIC ROUTES ====================
 
-// GET /api/vocabulary/stats - Lấy thống kê số từ vựng theo cấp độ HSK
-router.get("/stats", async (_req: Request, res: Response) => {
+// GET /api/vocabulary/stats - Thống kê số lượng từ vựng theo từng cấp độ HSK 3.0
+router.get('/stats', async (_req: Request, res: Response) => {
   try {
-    const totalWords = await Vocabulary.countDocuments();
-
-    const hskStats: Record<string, number> = {
-      hsk1: 0,
-      hsk2: 0,
-      hsk3: 0,
-      hsk4: 0,
-      hsk5: 0,
-      hsk6: 0,
-      hsk7_9: 0,
-    };
-
-    // Count words per HSK level
-    const pipeline = [
-      { $unwind: "$level" },
-      { $group: { _id: "$level", count: { $sum: 1 } } },
+    const pairs = [
+      { key: 'hsk1', levels: ['new-1', 'newest-1'] },
+      { key: 'hsk2', levels: ['new-2', 'newest-2'] },
+      { key: 'hsk3', levels: ['new-3', 'newest-3'] },
+      { key: 'hsk4', levels: ['new-4', 'newest-4'] },
+      { key: 'hsk5', levels: ['new-5', 'newest-5'] },
+      { key: 'hsk6', levels: ['new-6', 'newest-6'] },
+      { key: 'hsk7_9', levels: ['new-7', 'newest-7'] },
     ];
-    const levelCounts = await Vocabulary.aggregate(pipeline);
 
-    for (const item of levelCounts) {
-      const key = item._id.toLowerCase().replace(/\s+/g, "");
-      if (key in hskStats) {
-        hskStats[key] = item.count;
-      }
-    }
+    const stats: Record<string, number> = {};
+
+    await Promise.all(
+      pairs.map(async ({ key, levels }) => {
+        const query = buildLevelQuery(levels);
+        const count = await Vocabulary.countDocuments(query);
+        stats[key] = count;
+      })
+    );
+
+    const totalWords = await Vocabulary.countDocuments();
 
     return res.status(200).json({
       success: true,
-<<<<<<< Updated upstream
-      hsk3Stats: hskStats,
-=======
       hsk3Stats: stats,
->>>>>>> Stashed changes
       totalWords,
     });
   } catch (error) {
@@ -294,38 +261,11 @@ router.get("/stats", async (_req: Request, res: Response) => {
   }
 });
 
-<<<<<<< Updated upstream
-// GET /api/vocabulary/decks - Lấy danh sách bộ bài học theo HSK level & search
-router.get("/decks", async (req: Request, res: Response) => {
-=======
 // GET /api/vocabulary/decks - Lấy danh sách bộ bài học (decks) tự động từ vocabularies
 router.get('/decks', async (req: Request, res: Response) => {
->>>>>>> Stashed changes
   try {
     const { level = "all", search = "" } = req.query;
 
-<<<<<<< Updated upstream
-    // Build query filter
-    const filter: any = {};
-    if (level && level !== "all" && level !== "7") {
-      filter.level = { $regex: level as string, $options: "i" };
-    } else if (level === "7") {
-      filter.level = { $regex: "hsk[789]", $options: "i" };
-    }
-    if (search) {
-      filter.$or = [
-        { simplified: { $regex: search as string, $options: "i" } },
-        { pinyin: { $regex: search as string, $options: "i" } },
-        { meanings: { $regex: search as string, $options: "i" } },
-      ];
-    }
-
-    // Get all matching words to build decks
-    const words = await Vocabulary.find(filter)
-      .select("simplified traditional pinyin meanings level")
-      .sort({ level: 1, simplified: 1 })
-      .limit(2000);
-=======
     const levelPairs = level === 'all'
       ? [
           { levels: ['new-1', 'newest-1'], num: '1' },
@@ -429,83 +369,11 @@ router.get('/deck-words', async (req: Request, res: Response) => {
     const pageNum = Math.max(1, parseInt(page as string, 10) || 1);
     const limitNum = Math.min(250, Math.max(1, parseInt(limit as string, 10) || 250));
     const skip = (pageNum - 1) * limitNum;
->>>>>>> Stashed changes
 
-    // Group into decks by level
-    const deckMap = new Map<
-      string,
-      { title: string; hskLevel: string; levelKey: string; words: any[] }
-    >();
-
-    for (const w of words) {
-      for (const lvl of w.level) {
-        const lvlLower = lvl.toLowerCase();
-        const levelKey = lvlLower.replace(/\s+/g, "");
-        if (!deckMap.has(levelKey)) {
-          const hskDisplay = lvl.toUpperCase().replace("HSK", "HSK ");
-          deckMap.set(levelKey, {
-            title: `${hskDisplay} - Từ Vựng Chi Tiết`,
-            hskLevel: hskDisplay.trim(),
-            levelKey,
-            words: [],
-          });
-        }
-        deckMap.get(levelKey)!.words.push(w);
-      }
-    }
-
-    // Convert to array of HskDeck
-    const decks = Array.from(deckMap.entries()).map(([levelKey, data]) => ({
-      id: `deck-${levelKey}`,
-      hskLevel: data.hskLevel,
-      title: data.title,
-      totalWords: data.words.length,
-      newWordsCount: Math.min(data.words.length, 50),
-      reviewWordsCount: 0,
-      subtitle: `Danh sách ${data.words.length} từ`,
-      category: levelKey as any,
-      levelKey,
-      page: 1,
-      limit: 50,
-      isBookmarked: false,
-    }));
-
-    return res.status(200).json({
-      success: true,
-      totalDecks: decks.length,
-      decks,
-    });
-  } catch (error) {
-    if (error instanceof Error) {
-      return res.status(500).json({ error: error.message });
-    }
-    return res.status(500).json({ error: "Internal server error" });
-  }
-});
-
-// GET /api/vocabulary/deck-words - Lấy danh sách từ vựng trong 1 bộ bài học
-router.get("/deck-words", async (req: Request, res: Response) => {
-  try {
-    const { levelKey, page = "1", limit = "50", search = "" } = req.query;
-
-    const pageNum = parseInt(page as string, 10);
-    const limitNum = parseInt(limit as string, 10);
-
-    const filter: any = {
-      level: { $regex: levelKey as string, $options: "i" },
-    };
-    if (search) {
-      filter.$or = [
-        { simplified: { $regex: search as string, $options: "i" } },
-        { pinyin: { $regex: search as string, $options: "i" } },
-        { meanings: { $regex: search as string, $options: "i" } },
-      ];
-    }
-
-    const total = await Vocabulary.countDocuments(filter);
-    const words = await Vocabulary.find(filter)
+    const total = await Vocabulary.countDocuments(query);
+    const words = await Vocabulary.find(query)
       .sort({ frequency: 1 })
-      .skip((pageNum - 1) * limitNum)
+      .skip(skip)
       .limit(limitNum);
 
     return res.status(200).json({
@@ -523,23 +391,13 @@ router.get("/deck-words", async (req: Request, res: Response) => {
   }
 });
 
-<<<<<<< Updated upstream
-// GET /api/vocabulary - Lấy danh sách từ vựng (phân trang, lọc level, tìm kiếm)
-router.get("/", async (req: Request, res: Response) => {
-=======
 // GET /api/vocabulary - Danh sách từ vựng (phân trang, lọc level, tìm kiếm)
 router.get('/', async (req: Request, res: Response) => {
->>>>>>> Stashed changes
   try {
     const { level = "all", search = "", page = "1", limit = "20" } = req.query;
     const pageNum = parseInt(page as string, 10);
     const limitNum = parseInt(limit as string, 10);
 
-<<<<<<< Updated upstream
-    const filter: any = {};
-    if (level && level !== "all") {
-      filter.level = { $regex: level as string, $options: "i" };
-=======
     const query: Record<string, any> = {};
 
     if (level && typeof level === 'string' && level !== 'all') {
@@ -547,19 +405,20 @@ router.get('/', async (req: Request, res: Response) => {
       if (levelValues.length > 0) {
         Object.assign(query, buildLevelQuery(levelValues));
       }
->>>>>>> Stashed changes
     }
-    if (search) {
-      filter.$or = [
-        { simplified: { $regex: search as string, $options: "i" } },
-        { pinyin: { $regex: search as string, $options: "i" } },
-        { meanings: { $regex: search as string, $options: "i" } },
+    if (search && typeof search === 'string' && search.trim() !== '') {
+      const searchRegex = new RegExp(search.trim(), 'i');
+      query.$or = [
+        { simplified: searchRegex },
+        { pinyin: searchRegex },
+        { meanings: searchRegex },
+        { traditional: searchRegex },
       ];
     }
 
-    const total = await Vocabulary.countDocuments(filter);
+    const total = await Vocabulary.countDocuments(query);
     const totalPages = Math.ceil(total / limitNum);
-    const words = await Vocabulary.find(filter)
+    const words = await Vocabulary.find(query)
       .sort({ frequency: 1 })
       .skip((pageNum - 1) * limitNum)
       .limit(limitNum);
@@ -580,15 +439,22 @@ router.get('/', async (req: Request, res: Response) => {
   }
 });
 
-<<<<<<< Updated upstream
-// ==================== USER ROUTES ====================
-=======
 // GET /api/vocabulary/:id - Chi tiết từ vựng theo ID
 router.get('/:id', async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     const word = await Vocabulary.findById(id).lean();
->>>>>>> Stashed changes
+    if (!word) {
+      return res.status(404).json({ error: "Word not found" });
+    }
+    return res.status(200).json({ success: true, word });
+  } catch (error) {
+    if (error instanceof Error) {
+      return res.status(500).json({ error: error.message });
+    }
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
 
 // POST /api/vocabulary/pending - User gửi từ mới
 router.post("/pending", attachUser, async (req: Request, res: Response) => {

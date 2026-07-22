@@ -7,7 +7,7 @@ export default function UserLayout() {
   const [searchQuery, setSearchQuery] = useState('')
 
   return (
-    <div className="flex min-h-screen bg-[#0e1322] text-slate-100 font-sans antialiased">
+    <div className="flex min-h-screen bg-background text-foreground font-sans antialiased">
       {/* Fixed Left Sidebar */}
       <AppSidebar />
 

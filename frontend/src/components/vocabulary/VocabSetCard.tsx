@@ -19,12 +19,12 @@ export const VocabSetCard: React.FC<VocabSetCardProps> = ({
   const [isBookmarked, setIsBookmarked] = useState(!!set.isBookmarked)
 
   return (
-    <Card className="group relative flex flex-col justify-between rounded-xl border border-slate-800/80 bg-[#161c2e] p-5 shadow-lg transition-all duration-200 hover:-translate-y-1 hover:border-slate-700 hover:bg-[#1a2238] hover:shadow-emerald-950/20">
+    <Card className="group relative flex flex-col justify-between rounded-xl border border-border bg-card p-5 shadow-sm transition-all duration-200 hover:-translate-y-1 hover:border-primary/50 hover:bg-accent/30 hover:shadow-md">
       <CardHeader className="p-0 space-y-0">
         {/* Top Header: Book Icon, HSK Badge & Bookmark Button */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-emerald-500/10 text-emerald-400 group-hover:bg-emerald-500/20 transition-colors">
+            <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-primary/10 text-primary transition-colors">
               <BookOpen className="h-6 w-6 stroke-[1.75]" />
             </div>
             <HskBadge level={set.hskLevel} />
@@ -32,33 +32,33 @@ export const VocabSetCard: React.FC<VocabSetCardProps> = ({
 
           <Button
             variant="ghost"
-            size="icon-sm"
+            size="icon"
             onClick={(e) => {
               e.stopPropagation()
               setIsBookmarked(!isBookmarked)
             }}
-            className={`rounded-lg transition-colors ${
+            className={`h-8 w-8 rounded-lg transition-colors ${
               isBookmarked
-                ? 'text-amber-400 bg-amber-400/10 hover:bg-amber-400/20'
-                : 'text-slate-500 hover:bg-slate-800 hover:text-slate-300'
+                ? 'text-amber-500 bg-amber-500/10 hover:bg-amber-500/20'
+                : 'text-muted-foreground hover:bg-muted hover:text-foreground'
             }`}
             title={isBookmarked ? 'Đã lưu' : 'Lưu bộ từ'}
           >
-            <Bookmark className={`h-4 w-4 ${isBookmarked ? 'fill-amber-400' : ''}`} />
+            <Bookmark className={`h-4 w-4 ${isBookmarked ? 'fill-amber-500' : ''}`} />
           </Button>
         </div>
 
         {/* Title */}
-        <CardTitle className="mt-4 text-base font-bold text-slate-100 line-clamp-2 leading-snug group-hover:text-emerald-400 transition-colors">
+        <CardTitle className="mt-4 text-base font-bold text-foreground line-clamp-2 leading-snug group-hover:text-primary transition-colors">
           {set.title}
         </CardTitle>
       </CardHeader>
 
       <CardContent className="p-0 mt-2">
         {/* Word count & List label */}
-        <p className="text-xs font-medium text-slate-400">
-          <span className="font-semibold text-slate-200">{set.totalWords} từ</span> •{' '}
-          <span className="text-emerald-400 hover:underline cursor-pointer">
+        <p className="text-xs font-medium text-muted-foreground">
+          <span className="font-semibold text-foreground">{set.totalWords} từ</span> •{' '}
+          <span className="text-primary hover:underline cursor-pointer">
             {set.subtitle || 'Danh sách'}
           </span>
         </p>
@@ -70,12 +70,12 @@ export const VocabSetCard: React.FC<VocabSetCardProps> = ({
           type="button"
           variant="outline"
           onClick={() => onStartLearn?.(set.id)}
-          className="flex h-auto flex-col items-center justify-center rounded-lg bg-emerald-900/40 border border-emerald-700/40 p-2.5 transition-all hover:bg-emerald-800/50 hover:border-emerald-600 active:scale-[0.98]"
+          className="flex h-auto flex-col items-center justify-center rounded-lg border-primary/30 bg-primary/10 p-2.5 transition-all hover:bg-primary/20 hover:border-primary active:scale-[0.98]"
         >
-          <span className="text-lg font-black text-emerald-300 leading-none">
+          <span className="text-lg font-black text-primary leading-none">
             {set.newWordsCount}
           </span>
-          <span className="mt-1 text-[10px] font-bold tracking-wider text-emerald-400 uppercase">
+          <span className="mt-1 text-[10px] font-bold tracking-wider text-primary uppercase">
             HỌC TỪ MỚI
           </span>
         </Button>
@@ -84,12 +84,12 @@ export const VocabSetCard: React.FC<VocabSetCardProps> = ({
           type="button"
           variant="outline"
           onClick={() => onStartReview?.(set.id)}
-          className="flex h-auto flex-col items-center justify-center rounded-lg bg-slate-800/60 border border-slate-700/40 p-2.5 transition-all hover:bg-slate-700/60 hover:border-slate-600 active:scale-[0.98]"
+          className="flex h-auto flex-col items-center justify-center rounded-lg border-border bg-muted/50 p-2.5 transition-all hover:bg-muted active:scale-[0.98]"
         >
-          <span className="text-lg font-black text-amber-400 leading-none">
+          <span className="text-lg font-black text-foreground leading-none">
             {set.reviewWordsCount}
           </span>
-          <span className="mt-1 text-[10px] font-bold tracking-wider text-slate-300 uppercase">
+          <span className="mt-1 text-[10px] font-bold tracking-wider text-muted-foreground uppercase">
             ÔN TẬP
           </span>
         </Button>
@@ -97,3 +97,4 @@ export const VocabSetCard: React.FC<VocabSetCardProps> = ({
     </Card>
   )
 }
+
