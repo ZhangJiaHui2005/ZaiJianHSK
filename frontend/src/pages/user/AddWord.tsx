@@ -154,7 +154,7 @@ export default function AddWord() {
         <span className="text-xs font-bold tracking-wider text-emerald-400 uppercase">
           — ĐÓNG GÓP TỪ VỰNG
         </span>
-        <h1 className="mt-1 text-3xl font-black tracking-tight text-white sm:text-4xl">
+        <h1 className="mt-1 text-3xl font-black tracking-tight text-foreground sm:text-4xl">
           Thêm từ mới
         </h1>
         <p className="mt-2 text-sm text-slate-400">
@@ -189,7 +189,7 @@ export default function AddWord() {
         <form onSubmit={handleSubmit} className="flex flex-col gap-5">
           {/* Simplified Chinese */}
           <div>
-            <label className="mb-1.5 block text-sm font-semibold text-slate-200">
+            <label className="mb-1.5 block text-sm font-semibold text-foreground">
               Chữ Hán (Giản thể) <span className="text-red-400">*</span>
             </label>
             <Input
@@ -202,7 +202,7 @@ export default function AddWord() {
 
           {/* Traditional Chinese */}
           <div>
-            <label className="mb-1.5 block text-sm font-semibold text-slate-200">
+            <label className="mb-1.5 block text-sm font-semibold text-foreground">
               Chữ Hán (Phồn thể){" "}
               <span className="text-slate-500">(không bắt buộc)</span>
             </label>
@@ -216,7 +216,7 @@ export default function AddWord() {
 
           {/* Pinyin */}
           <div>
-            <label className="mb-1.5 block text-sm font-semibold text-slate-200">
+            <label className="mb-1.5 block text-sm font-semibold text-foreground">
               Pinyin <span className="text-red-400">*</span>
             </label>
             <Input
@@ -229,7 +229,7 @@ export default function AddWord() {
 
           {/* Meanings */}
           <div>
-            <label className="mb-1.5 block text-sm font-semibold text-slate-200">
+            <label className="mb-1.5 block text-sm font-semibold text-foreground">
               Nghĩa <span className="text-red-400">*</span>
             </label>
             <div className="flex gap-2">
@@ -276,7 +276,7 @@ export default function AddWord() {
 
           {/* HSK Level Selector */}
           <div>
-            <label className="mb-1.5 block text-sm font-semibold text-slate-200">
+            <label className="mb-1.5 block text-sm font-semibold text-foreground">
               Xếp vào trình độ HSK{" "}
               <span className="text-slate-500">(không bắt buộc)</span>
             </label>
