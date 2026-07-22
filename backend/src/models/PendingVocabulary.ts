@@ -16,6 +16,8 @@ export interface IPendingVocabulary extends Document {
   adminId?: mongoose.Types.ObjectId;
   reviewedAt?: Date;
   notes?: string;
+  assignedDeckIds?: mongoose.Types.ObjectId[];
+  assignedDeckNames?: string[];
   createdAt: Date;
   updatedAt: Date;
 }
@@ -86,6 +88,15 @@ const PendingVocabularySchema: Schema = new Schema(
     notes: {
       type: String,
       default: "",
+    },
+    assignedDeckIds: {
+      type: [Schema.Types.ObjectId],
+      ref: "Deck",
+      default: [],
+    },
+    assignedDeckNames: {
+      type: [String],
+      default: [],
     },
   },
   {

@@ -1,4 +1,4 @@
-import { Outlet, Link, useLocation, Navigate } from "react-router-dom"
+import { Outlet, Link, useLocation, useNavigate } from "react-router-dom"
 import { UserButton, useClerk, useUser } from "@clerk/clerk-react"
 import { useEffect, useState } from "react"
 import { getUserByClerkId } from "@/lib/api"
@@ -35,20 +35,35 @@ export default function AdminLayout() {
   const { user, isLoaded, isSignedIn } = useUser()
   const { signOut } = useClerk()
   const location = useLocation()
+  const navigate = useNavigate()
   const [userRole, setUserRole] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
+  const [redirectTo, setRedirectTo] = useState<string | null>(null)
 
   useEffect(() => {
-    if (!isLoaded || !isSignedIn || !user) return
+    if (!isLoaded) return
+
+    if (!isSignedIn) {
+      setRedirectTo("/")
+      setLoading(false)
+      return
+    }
+
+    if (!user) return
 
     const fetchRole = async () => {
       try {
         const userData = await getUserByClerkId(user.id)
         if (userData) {
-          setUserRole((userData as any).role || "user")
+          const role = (userData as any).role || "user"
+          setUserRole(role)
+          if (role !== "admin") {
+            setRedirectTo("/user")
+          }
         }
       } catch (err) {
         console.error("Failed to fetch user role:", err)
+        setRedirectTo("/")
       } finally {
         setLoading(false)
       }
@@ -56,6 +71,14 @@ export default function AdminLayout() {
 
     fetchRole()
   }, [user, isLoaded, isSignedIn])
+
+  // Perform redirects via navigate() instead of <Navigate> to avoid
+  // React Router v7 throwing ErrorResponseImpl for redirects
+  useEffect(() => {
+    if (redirectTo) {
+      navigate(redirectTo, { replace: true })
+    }
+  }, [redirectTo, navigate])
 
   if (!isLoaded || loading) {
     return (
@@ -65,12 +88,13 @@ export default function AdminLayout() {
     )
   }
 
-  if (!isSignedIn) {
-    return <Navigate to="/" replace />
-  }
-
-  if (userRole !== "admin") {
-    return <Navigate to="/user" replace />
+  // Don't render the admin layout if we're about to redirect
+  if (redirectTo || !isSignedIn || userRole !== "admin") {
+    return (
+      <div className="flex min-h-svh items-center justify-center gap-4">
+        <Skeleton className="h-8 w-48" />
+      </div>
+    )
   }
 
   return (

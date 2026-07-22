@@ -268,19 +268,19 @@ router.get('/decks', async (req: Request, res: Response) => {
 
     const levelPairs = level === 'all'
       ? [
-          { levels: ['new-1', 'newest-1'], num: '1' },
-          { levels: ['new-2', 'newest-2'], num: '2' },
-          { levels: ['new-3', 'newest-3'], num: '3' },
-          { levels: ['new-4', 'newest-4'], num: '4' },
-          { levels: ['new-5', 'newest-5'], num: '5' },
-          { levels: ['new-6', 'newest-6'], num: '6' },
-          { levels: ['new-7', 'newest-7'], num: '7' },
-        ]
+        { levels: ['new-1', 'newest-1'], num: '1' },
+        { levels: ['new-2', 'newest-2'], num: '2' },
+        { levels: ['new-3', 'newest-3'], num: '3' },
+        { levels: ['new-4', 'newest-4'], num: '4' },
+        { levels: ['new-5', 'newest-5'], num: '5' },
+        { levels: ['new-6', 'newest-6'], num: '6' },
+        { levels: ['new-7', 'newest-7'], num: '7' },
+      ]
       : (() => {
-          const vals = getLevelValues(level as string);
-          if (vals.length === 0) return [];
-          return [{ levels: vals, num: vals[0].replace('new-', '').replace('newest-', '') }];
-        })();
+        const vals = getLevelValues(level as string);
+        if (vals.length === 0) return [];
+        return [{ levels: vals, num: vals[0].replace('new-', '').replace('newest-', '') }];
+      })();
 
     const WORDS_PER_DECK = 250;
     const allDecks: any[] = [];

@@ -4,22 +4,26 @@ import { SignedIn, SignedOut, SignInButton, UserButton, useUser } from '@clerk/c
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
+import { useTheme } from '../theme-provider'
 
 interface TopHeaderProps {
-  searchQuery?: string;
-  onSearchChange?: (query: string) => void;
+  searchQuery?: string
+  onSearchChange?: (query: string) => void
 }
 
 export const TopHeader: React.FC<TopHeaderProps> = ({
-  searchQuery = '',
+  searchQuery = "",
   onSearchChange,
 }) => {
   const { user } = useUser()
-  const [isDarkMode, setIsDarkMode] = React.useState(true)
+  const { theme, setTheme } = useTheme()
+  const isDarkMode =
+    theme === "dark" ||
+    (theme === "system" &&
+      window.matchMedia("(prefers-color-scheme: dark)").matches)
 
   const toggleTheme = () => {
-    setIsDarkMode(!isDarkMode)
-    document.documentElement.classList.toggle('dark')
+    setTheme(isDarkMode ? "light" : "dark")
   }
 
   return (
@@ -50,7 +54,11 @@ export const TopHeader: React.FC<TopHeaderProps> = ({
           className="h-9 w-9 rounded-xl transition-colors"
           title="Đổi giao diện"
         >
-          {isDarkMode ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+          {isDarkMode ? (
+            <Sun className="h-4 w-4" />
+          ) : (
+            <Moon className="h-4 w-4" />
+          )}
         </Button>
 
         {/* Language Selector */}

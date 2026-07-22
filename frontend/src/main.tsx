@@ -7,6 +7,7 @@ import "./index.css"
 import { router } from "./router"
 import { ThemeProvider } from "./components/theme-provider.tsx"
 import { TooltipProvider } from "@/components/ui/tooltip"
+import { AppErrorBoundary } from "./components/RouteErrorBoundary"
 
 const CLERK_PUBLISHABLE_KEY = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY
 
@@ -16,12 +17,14 @@ if (!CLERK_PUBLISHABLE_KEY) {
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
-    <ClerkProvider publishableKey={CLERK_PUBLISHABLE_KEY}>
-      <ThemeProvider>
-        <TooltipProvider>
-          <RouterProvider router={router} />
-        </TooltipProvider>
-      </ThemeProvider>
-    </ClerkProvider>
+    <AppErrorBoundary>
+      <ClerkProvider publishableKey={CLERK_PUBLISHABLE_KEY}>
+        <ThemeProvider>
+          <TooltipProvider>
+            <RouterProvider router={router} />
+          </TooltipProvider>
+        </ThemeProvider>
+      </ClerkProvider>
+    </AppErrorBoundary>
   </StrictMode>
 )

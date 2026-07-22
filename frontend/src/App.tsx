@@ -1,15 +1,18 @@
-import { useEffect, useState } from "react"
+import { useEffect, useState, useRef } from "react"
 import { Outlet } from "react-router-dom"
 import { useUser } from "@clerk/clerk-react"
 import { syncUserToDB } from "./lib/api"
 
 export function App() {
-  const { user } = useUser()
+  const { user, isLoaded, isSignedIn } = useUser()
   const [syncing, setSyncing] = useState(false)
+  const syncedRef = useRef(false)
 
-  // Sync user to MongoDB on Clerk login
+  // Sync user to MongoDB once after Clerk has fully loaded
   useEffect(() => {
-    if (!user || syncing) return
+    // Only proceed once Clerk has finished loading AND user is signed in
+    if (!isLoaded || !isSignedIn || !user || syncing || syncedRef.current)
+      return
 
     const syncUser = async () => {
       setSyncing(true)
@@ -26,6 +29,7 @@ export function App() {
           email,
         })
         console.log("✅ User synced to MongoDB:", result.message)
+        syncedRef.current = true
       } catch (error) {
         console.error("❌ Failed to sync user:", error)
       } finally {
@@ -34,7 +38,14 @@ export function App() {
     }
 
     syncUser()
-  }, [user])
+  }, [user, isLoaded, isSignedIn]) // depend on isLoaded to ensure Clerk is ready
+
+  // Reset sync flag when user signs out
+  useEffect(() => {
+    if (isLoaded && !isSignedIn) {
+      syncedRef.current = false
+    }
+  }, [isLoaded, isSignedIn])
 
   return (
     <div className="min-h-svh">
