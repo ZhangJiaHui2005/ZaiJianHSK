@@ -111,10 +111,14 @@ export async function syncUserToDB({
 }
 
 // Lấy thông tin user từ MongoDB theo clerkId
+// Cần token vì backend dùng requireSelfOrAdmin: chỉ chính chủ hoặc admin mới xem được
 export async function getUserByClerkId(
-  clerkId: string
+  clerkId: string,
+  token: string
 ): Promise<UserResponse["user"] | null> {
-  const res = await fetch(`${API_BASE_URL}/api/users/${clerkId}`)
+  const res = await fetch(`${API_BASE_URL}/api/users/${clerkId}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  })
 
   if (res.status === 404) {
     return null
@@ -129,9 +133,10 @@ export async function getUserByClerkId(
 }
 
 // Xoá user theo clerkId (admin)
-export async function deleteUser(clerkId: string): Promise<void> {
+export async function deleteUser(clerkId: string, token: string): Promise<void> {
   const res = await fetch(`${API_BASE_URL}/api/users/delete/${clerkId}`, {
     method: "DELETE",
+    headers: { Authorization: `Bearer ${token}` },
   })
 
   if (!res.ok) {
@@ -248,7 +253,7 @@ export interface PendingVocabResponse {
 
 // Admin lấy danh sách từ đang chờ duyệt
 export async function getPendingVocabulary(
-  clerkId: string,
+  token: string,
   params: { status?: string; page?: number; limit?: number }
 ): Promise<PendingVocabResponse> {
   const searchParams = new URLSearchParams()
@@ -260,7 +265,7 @@ export async function getPendingVocabulary(
     `${API_BASE_URL}/api/vocabulary/pending?${searchParams.toString()}`,
     {
       headers: {
-        "x-clerk-user-id": clerkId,
+        Authorization: `Bearer ${token}`,
       },
     }
   )
@@ -275,7 +280,7 @@ export async function getPendingVocabulary(
 
 // Admin duyệt từ (có thể gửi kèm level để phân loại vào thư viện HSK)
 export async function approvePendingVocabulary(
-  clerkId: string,
+  token: string,
   pendingId: string,
   level?: string[],
   assignedDeckIds?: string[]
@@ -286,7 +291,7 @@ export async function approvePendingVocabulary(
       method: "PATCH",
       headers: {
         "Content-Type": "application/json",
-        "x-clerk-user-id": clerkId,
+        Authorization: `Bearer ${token}`,
       },
       body: JSON.stringify({ level, assignedDeckIds }),
     }
@@ -302,7 +307,7 @@ export async function approvePendingVocabulary(
 
 // Admin từ chối từ
 export async function rejectPendingVocabulary(
-  clerkId: string,
+  token: string,
   pendingId: string,
   notes: string
 ): Promise<any> {
@@ -312,7 +317,7 @@ export async function rejectPendingVocabulary(
       method: "PATCH",
       headers: {
         "Content-Type": "application/json",
-        "x-clerk-user-id": clerkId,
+        Authorization: `Bearer ${token}`,
       },
       body: JSON.stringify({ notes }),
     }
@@ -328,7 +333,7 @@ export async function rejectPendingVocabulary(
 
 // Admin xóa vĩnh viễn khỏi PendingVocabulary (chỉ dành cho rejected items)
 export async function permanentDeletePendingVocabulary(
-  clerkId: string,
+  token: string,
   pendingId: string
 ): Promise<any> {
   const res = await fetch(
@@ -336,7 +341,7 @@ export async function permanentDeletePendingVocabulary(
     {
       method: "DELETE",
       headers: {
-        "x-clerk-user-id": clerkId,
+        Authorization: `Bearer ${token}`,
       },
     }
   )

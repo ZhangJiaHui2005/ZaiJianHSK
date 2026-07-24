@@ -1,52 +1,9 @@
 import { Router, Request, Response } from "express";
-import User from "../models/Users.js";
-import Vocabulary from "../models/Vocabulary.js";
-import PendingVocabulary from "../models/PendingVocabulary.js";
+import Vocabulary from "../models/Vocabulary";
+import PendingVocabulary from "../models/PendingVocabulary";
+import { requireAdmin, attachUser } from "../middleware/auth";
 
 const router = Router();
-
-// Middleware: check if user is admin
-const requireAdmin = async (req: Request, res: Response, next: Function) => {
-  try {
-    const clerkId = req.headers["x-clerk-user-id"] as string;
-    if (!clerkId) {
-      return res.status(401).json({ error: "Authentication required" });
-    }
-
-    const user = await User.findOne({ clerkId });
-    if (!user) {
-      return res.status(404).json({ error: "User not found" });
-    }
-    if (user.role !== "admin") {
-      return res.status(403).json({ error: "Admin access required" });
-    }
-
-    // Attach user to request for downstream use
-    (req as any).currentUser = user;
-    next();
-  } catch (error) {
-    if (error instanceof Error) {
-      return res.status(500).json({ error: error.message });
-    }
-    return res.status(500).json({ error: "Internal server error" });
-  }
-};
-
-// Middleware: attach current user from header
-const attachUser = async (req: Request, res: Response, next: Function) => {
-  try {
-    const clerkId = req.headers["x-clerk-user-id"] as string;
-    if (clerkId) {
-      const user = await User.findOne({ clerkId });
-      if (user) {
-        (req as any).currentUser = user;
-      }
-    }
-    next();
-  } catch (error) {
-    next();
-  }
-};
 
 /**
  * Returns level values for MongoDB $elemMatch $in query

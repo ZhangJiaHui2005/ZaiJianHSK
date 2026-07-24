@@ -1,5 +1,5 @@
 import { Outlet, Link, useLocation, useNavigate } from "react-router-dom"
-import { UserButton, useClerk, useUser } from "@clerk/clerk-react"
+import { UserButton, useClerk, useUser, useAuth } from "@clerk/clerk-react"
 import { useEffect, useState } from "react"
 import { getUserByClerkId } from "@/lib/api"
 import {
@@ -33,6 +33,7 @@ const navItems = [
 
 export default function AdminLayout() {
   const { user, isLoaded, isSignedIn } = useUser()
+  const { getToken } = useAuth()
   const { signOut } = useClerk()
   const location = useLocation()
   const navigate = useNavigate()
@@ -53,7 +54,13 @@ export default function AdminLayout() {
 
     const fetchRole = async () => {
       try {
-        const userData = await getUserByClerkId(user.id)
+        const token = await getToken()
+        if (!token) {
+          setRedirectTo("/")
+          setLoading(false)
+          return
+        }
+        const userData = await getUserByClerkId(user.id, token)
         if (userData) {
           const role = (userData as any).role || "user"
           setUserRole(role)
@@ -70,7 +77,7 @@ export default function AdminLayout() {
     }
 
     fetchRole()
-  }, [user, isLoaded, isSignedIn])
+  }, [user, isLoaded, isSignedIn, getToken])
 
   // Perform redirects via navigate() instead of <Navigate> to avoid
   // React Router v7 throwing ErrorResponseImpl for redirects
