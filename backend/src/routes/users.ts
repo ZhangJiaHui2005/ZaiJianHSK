@@ -68,7 +68,7 @@ router.get('/', requireAdmin, async (req: Request, res: Response) => {
 // GET /api/users/:clerkId - Lấy thông tin user theo clerkId
 router.get('/:clerkId', requireSelfOrAdmin, async (req: Request, res: Response) => {
   try {
-    const { clerkId } = req.params;
+    const clerkId = String(req.params.clerkId);
 
     const user = await User.findOne({ clerkId });
 
@@ -88,7 +88,7 @@ router.get('/:clerkId', requireSelfOrAdmin, async (req: Request, res: Response) 
 // PATCH /api/users/:clerkId/role - Cập nhật role user (admin)
 router.patch('/:clerkId/role', requireAdmin, async (req: Request, res: Response) => {
   try {
-    const { clerkId } = req.params;
+    const clerkId = String(req.params.clerkId);
     const { role } = req.body;
 
     const validRoles = ['admin', 'moderator', 'user'];
@@ -122,7 +122,7 @@ router.patch('/:clerkId/role', requireAdmin, async (req: Request, res: Response)
 // DELETE /api/users/delete/:clerkId - Xoá user khỏi Clerk và MongoDB (admin)
 router.delete('/delete/:clerkId', requireAdmin, async (req: Request, res: Response) => {
   try {
-    const { clerkId } = req.params;
+    const clerkId = String(req.params.clerkId);
 
     // Xoá user trên Clerk dashboard trước
     try {
@@ -164,4 +164,3 @@ router.delete('/delete/:clerkId', requireAdmin, async (req: Request, res: Respon
 });
 
 export default router;
-

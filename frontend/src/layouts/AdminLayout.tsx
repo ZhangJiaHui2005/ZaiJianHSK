@@ -23,12 +23,13 @@ import {
   SidebarInset,
 } from "@/components/ui/sidebar"
 import { Skeleton } from "@/components/ui/skeleton"
-import { LayoutDashboard, LogOut, Users, FileClock } from "lucide-react"
+import { LayoutDashboard, LogOut, Users, FileClock, Flag } from "lucide-react"
 
 const navItems = [
   { path: "/admin", label: "Dashboard", icon: LayoutDashboard },
   { path: "/admin/users", label: "Manage Users", icon: Users },
   { path: "/admin/pending-vocabulary", label: "Pending", icon: FileClock },
+  { path: "/admin/reports", label: "Reports", icon: Flag },
 ]
 
 export default function AdminLayout() {

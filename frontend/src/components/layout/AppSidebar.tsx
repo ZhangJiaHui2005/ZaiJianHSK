@@ -7,6 +7,7 @@ import {
   Sprout,
   Users,
   Sparkles,
+  Compass,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
@@ -31,14 +32,9 @@ export const AppSidebar: React.FC<AppSidebarProps> = () => {
       icon: PlusCircle,
     },
     {
-      label: 'Giải trí',
-      path: '/user/arcade',
-      icon: Gamepad2,
-    },
-    {
-      label: 'Trại ươm',
-      path: '/user/garden',
-      icon: Sprout,
+      label: 'Cộng đồng',
+      path: '/user/community',
+      icon: Compass,
     },
   ]
 
@@ -67,7 +63,8 @@ export const AppSidebar: React.FC<AppSidebarProps> = () => {
             const Icon = item.icon
             const isActive =
               location.pathname === item.path ||
-              (item.path === '/user' && location.pathname === '/user')
+              (item.path === '/user' && location.pathname === '/user') ||
+              (item.path !== '/user' && location.pathname.startsWith(item.path))
 
             return (
               <Link
@@ -103,7 +100,9 @@ export const AppSidebar: React.FC<AppSidebarProps> = () => {
               Chia sẻ từ vựng HSK, kinh nghiệm luyện đề mỗi ngày
             </p>
             <Button size="sm" className="mt-2.5 h-7 text-[10px] font-bold px-2.5 rounded-md w-full">
-              Tham gia ngay &rarr;
+              <Link to='/user/community'>
+                Tham gia ngay &rarr;
+              </Link>
             </Button>
           </CardContent>
         </Card>
@@ -127,4 +126,3 @@ export const AppSidebar: React.FC<AppSidebarProps> = () => {
     </aside>
   )
 }
-

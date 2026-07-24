@@ -5,6 +5,8 @@ import connectDB from './config/db.js';
 import userRoutes from './routes/users.js';
 import vocabularyRoutes from './routes/vocabulary.js';
 import deckRoutes from './routes/deck.js';
+import communityDeckRoutes from './routes/communityDecks.js';
+import adminReportRoutes from './routes/adminReports.js';
 import { clerkMiddleware } from '@clerk/express';
 
 const app = express();
@@ -20,6 +22,8 @@ app.use(clerkMiddleware());
 app.use('/api/users', userRoutes);
 app.use('/api/vocabulary', vocabularyRoutes);
 app.use('/api/decks', deckRoutes);
+app.use('/api/community-decks', communityDeckRoutes);
+app.use('/api/admin/reports', adminReportRoutes);
 
 app.get('/', (_req: Request, res: Response) => {
   res.json({ message: 'ZaiJianHSK Backend API' });

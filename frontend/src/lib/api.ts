@@ -84,6 +84,51 @@ export interface VocabularyListResponse {
   words: VocabularyWord[]
 }
 
+export interface CommunityDeckOwner {
+  _id: string
+  username: string
+  email?: string
+}
+
+export interface CommunityDeck {
+  _id: string
+  title: string
+  description: string
+  ownerId: CommunityDeckOwner | string
+  wordIds: VocabularyWord[] | string[]
+  visibility: "private" | "public" | "unlisted"
+  status: "draft" | "published" | "hidden"
+  tags: string[]
+  hskLevels: string[]
+  sourceDeckId?: string | null
+  saveCount: number
+  forkCount: number
+  commentCount: number
+  isSaved: boolean
+  createdAt: string
+  updatedAt: string
+}
+
+export interface CommunityDeckListResponse {
+  success: boolean
+  total: number
+  page: number
+  limit: number
+  totalPages: number
+  decks: CommunityDeck[]
+}
+
+export interface CommunityDeckComment {
+  _id: string
+  deckId: string
+  authorId: { _id: string; username: string } | string
+  content: string
+  status: "visible" | "hidden"
+  createdAt: string
+  updatedAt: string
+  canManage: boolean
+}
+
 // Tạo / đồng bộ user lên MongoDB sau khi Clerk login
 export async function syncUserToDB({
   clerkId,
@@ -396,5 +441,330 @@ export async function fetchVocabularyList({
     throw new Error("Failed to fetch vocabulary list")
   }
 
+  return res.json()
+}
+
+// ==================== COMMUNITY DECKS ====================
+
+function authHeaders(token?: string | null): Record<string, string> {
+  return token ? { Authorization: `Bearer ${token}` } : {}
+}
+
+export async function fetchCommunityDecks({
+  search = "",
+  page = 1,
+  limit = 20,
+  sort = "popular",
+  token,
+}: {
+  search?: string
+  page?: number
+  limit?: number
+  sort?: "popular" | "recent"
+  token?: string | null
+}): Promise<CommunityDeckListResponse> {
+  const params = new URLSearchParams()
+  if (search) params.append("search", search)
+  params.append("page", String(page))
+  params.append("limit", String(limit))
+  params.append("sort", sort)
+
+  const res = await fetch(`${API_BASE_URL}/api/community-decks?${params.toString()}`, {
+    headers: authHeaders(token),
+  })
+
+  if (!res.ok) {
+    throw new Error("Failed to fetch community decks")
+  }
+
+  return res.json()
+}
+
+export async function fetchMyCommunityDecks(token: string): Promise<{ success: boolean; decks: CommunityDeck[] }> {
+  const res = await fetch(`${API_BASE_URL}/api/community-decks/my`, {
+    headers: authHeaders(token),
+  })
+
+  if (!res.ok) {
+    const errorData = await res.json().catch(() => ({ error: "Unknown error" }))
+    throw new Error(errorData.error || "Failed to fetch my community decks")
+  }
+
+  return res.json()
+}
+
+export async function fetchCommunityDeck(
+  deckId: string,
+  token?: string | null
+): Promise<{ success: boolean; deck: CommunityDeck }> {
+  const res = await fetch(`${API_BASE_URL}/api/community-decks/${deckId}`, {
+    headers: authHeaders(token),
+  })
+
+  if (!res.ok) {
+    const errorData = await res.json().catch(() => ({ error: "Unknown error" }))
+    throw new Error(errorData.error || "Failed to fetch community deck")
+  }
+
+  return res.json()
+}
+
+export async function createCommunityDeck(
+  token: string,
+  payload: {
+    title: string
+    description?: string
+    wordIds?: string[]
+    visibility?: "private" | "public" | "unlisted"
+    tags?: string[]
+    hskLevels?: string[]
+  }
+): Promise<{ success: boolean; deck: CommunityDeck }> {
+  const res = await fetch(`${API_BASE_URL}/api/community-decks`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      ...authHeaders(token),
+    },
+    body: JSON.stringify(payload),
+  })
+
+  if (!res.ok) {
+    const errorData = await res.json().catch(() => ({ error: "Unknown error" }))
+    throw new Error(errorData.error || "Failed to create community deck")
+  }
+
+  return res.json()
+}
+
+export async function saveCommunityDeck(
+  token: string,
+  deckId: string,
+  saved: boolean
+): Promise<{ success: boolean; isSaved: boolean; saveCount: number }> {
+  const res = await fetch(`${API_BASE_URL}/api/community-decks/${deckId}/save`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      ...authHeaders(token),
+    },
+    body: JSON.stringify({ saved }),
+  })
+
+  if (!res.ok) {
+    const errorData = await res.json().catch(() => ({ error: "Unknown error" }))
+    throw new Error(errorData.error || "Failed to save community deck")
+  }
+
+  return res.json()
+}
+
+export async function fetchDeckForks(
+  deckId: string,
+  token?: string | null
+): Promise<{ success: boolean; forks: CommunityDeck[] }> {
+  const res = await fetch(`${API_BASE_URL}/api/community-decks/${deckId}/forks`, {
+    headers: authHeaders(token),
+  })
+  if (!res.ok) {
+    const errorData = await res.json().catch(() => ({ error: "Unknown error" }))
+    throw new Error(errorData.error || "Failed to fetch forks")
+  }
+  return res.json()
+}
+
+export async function fetchDeckAncestors(
+  deckId: string,
+  token?: string | null
+): Promise<{ success: boolean; lineage: Array<{ _id: string; title: string; username: string }> }> {
+  const res = await fetch(`${API_BASE_URL}/api/community-decks/${deckId}/ancestors`, {
+    headers: authHeaders(token),
+  })
+  if (!res.ok) {
+    const errorData = await res.json().catch(() => ({ error: "Unknown error" }))
+    throw new Error(errorData.error || "Failed to fetch ancestors")
+  }
+  return res.json()
+}
+
+export async function forkCommunityDeck(
+  token: string,
+  deckId: string
+): Promise<{ success: boolean; deck: CommunityDeck }> {
+  const res = await fetch(`${API_BASE_URL}/api/community-decks/${deckId}/fork`, {
+    method: "POST",
+    headers: authHeaders(token),
+  })
+
+  if (!res.ok) {
+    const errorData = await res.json().catch(() => ({ error: "Unknown error" }))
+    throw new Error(errorData.error || "Failed to fork community deck")
+  }
+
+  return res.json()
+}
+
+export async function fetchCommunityDeckComments(
+  deckId: string,
+  token?: string | null
+): Promise<{ success: boolean; comments: CommunityDeckComment[] }> {
+  const res = await fetch(`${API_BASE_URL}/api/community-decks/${deckId}/comments`, {
+    headers: authHeaders(token),
+  })
+  if (!res.ok) {
+    const errorData = await res.json().catch(() => ({ error: "Unknown error" }))
+    throw new Error(errorData.error || "Failed to fetch comments")
+  }
+  return res.json()
+}
+
+export async function createCommunityDeckComment(
+  token: string,
+  deckId: string,
+  content: string
+): Promise<{ success: boolean; comment: CommunityDeckComment; commentCount: number }> {
+  const res = await fetch(`${API_BASE_URL}/api/community-decks/${deckId}/comments`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...authHeaders(token) },
+    body: JSON.stringify({ content }),
+  })
+  if (!res.ok) {
+    const errorData = await res.json().catch(() => ({ error: "Unknown error" }))
+    throw new Error(errorData.error || "Failed to create comment")
+  }
+  return res.json()
+}
+
+export async function deleteCommunityDeckComment(
+  token: string,
+  deckId: string,
+  commentId: string
+): Promise<{ success: boolean; commentCount: number }> {
+  const res = await fetch(`${API_BASE_URL}/api/community-decks/${deckId}/comments/${commentId}`, {
+    method: "DELETE",
+    headers: authHeaders(token),
+  })
+  if (!res.ok) {
+    const errorData = await res.json().catch(() => ({ error: "Unknown error" }))
+    throw new Error(errorData.error || "Failed to delete comment")
+  }
+  return res.json()
+}
+
+// ==================== REPORT SYSTEM ====================
+
+export interface DeckReport {
+  _id: string
+  deckId: {
+    _id: string
+    title: string
+    ownerId: { _id: string; username: string; email?: string }
+    visibility: string
+    status: string
+    saveCount: number
+  } | string
+  reporterId: { _id: string; username: string; email?: string } | string
+  reason: "spam" | "inappropriate" | "wrong_topic" | "duplicate" | "other"
+  description: string
+  status: "pending" | "resolved" | "dismissed"
+  adminId?: { _id: string; username: string; email?: string } | string | null
+  resolvedAt?: string | null
+  createdAt: string
+  updatedAt: string
+}
+
+export interface DeckReportListResponse {
+  success: boolean
+  total: number
+  page: number
+  limit: number
+  totalPages: number
+  reports: DeckReport[]
+}
+
+// User report a community deck
+export async function reportCommunityDeck(
+  token: string,
+  deckId: string,
+  reason: string,
+  description?: string
+): Promise<{ success: boolean; report: { _id: string; reason: string; status: string; createdAt: string } }> {
+  const res = await fetch(`${API_BASE_URL}/api/community-decks/${deckId}/report`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...authHeaders(token) },
+    body: JSON.stringify({ reason, description }),
+  })
+  if (!res.ok) {
+    const errorData = await res.json().catch(() => ({ error: "Unknown error" }))
+    throw new Error(errorData.error || "Failed to report deck")
+  }
+  return res.json()
+}
+
+// Admin fetch reports
+export async function fetchDeckReports(
+  token: string,
+  params: { status?: string; page?: number; limit?: number }
+): Promise<DeckReportListResponse> {
+  const searchParams = new URLSearchParams()
+  if (params.status) searchParams.append("status", params.status)
+  if (params.page) searchParams.append("page", String(params.page))
+  if (params.limit) searchParams.append("limit", String(params.limit))
+
+  const res = await fetch(`${API_BASE_URL}/api/admin/reports?${searchParams.toString()}`, {
+    headers: authHeaders(token),
+  })
+  if (!res.ok) {
+    const errorData = await res.json().catch(() => ({ error: "Unknown error" }))
+    throw new Error(errorData.error || "Failed to fetch reports")
+  }
+  return res.json()
+}
+
+// Admin resolve report
+export async function resolveReport(
+  token: string,
+  reportId: string
+): Promise<{ success: boolean; message: string; report: { _id: string; status: string } }> {
+  const res = await fetch(`${API_BASE_URL}/api/admin/reports/${reportId}/resolve`, {
+    method: "PATCH",
+    headers: authHeaders(token),
+  })
+  if (!res.ok) {
+    const errorData = await res.json().catch(() => ({ error: "Unknown error" }))
+    throw new Error(errorData.error || "Failed to resolve report")
+  }
+  return res.json()
+}
+
+// Admin dismiss report
+export async function dismissReport(
+  token: string,
+  reportId: string
+): Promise<{ success: boolean; message: string; report: { _id: string; status: string } }> {
+  const res = await fetch(`${API_BASE_URL}/api/admin/reports/${reportId}/dismiss`, {
+    method: "PATCH",
+    headers: authHeaders(token),
+  })
+  if (!res.ok) {
+    const errorData = await res.json().catch(() => ({ error: "Unknown error" }))
+    throw new Error(errorData.error || "Failed to dismiss report")
+  }
+  return res.json()
+}
+
+// Admin hide deck and resolve report
+export async function hideDeckAndResolveReport(
+  token: string,
+  reportId: string
+): Promise<{ success: boolean; message: string; report: { _id: string; status: string }; deck: { _id: string; title: string; status: string } }> {
+  const res = await fetch(`${API_BASE_URL}/api/admin/reports/${reportId}/hide-deck`, {
+    method: "PATCH",
+    headers: authHeaders(token),
+  })
+  if (!res.ok) {
+    const errorData = await res.json().catch(() => ({ error: "Unknown error" }))
+    throw new Error(errorData.error || "Failed to hide deck")
+  }
   return res.json()
 }
