@@ -1,17 +1,22 @@
-import React, { useState, useEffect, useCallback } from 'react'
+import React, { useState, useEffect, useCallback, useMemo } from 'react'
 import { useOutletContext } from 'react-router-dom'
-import { Languages, Mic, PenTool, SlidersHorizontal, Loader2, Sparkles, Folder } from 'lucide-react'
+import { Languages, Mic, PenTool, SlidersHorizontal, Loader2, Sparkles, Folder, Volume2, Search, ChevronDown, List } from 'lucide-react'
 import {
   fetchVocabularyStats,
   fetchHskDecks,
+  fetchVocabularyByLevel,
   type HskDeck,
   type Hsk3StatsResponse,
+  type VocabLevelGroup,
 } from '@/lib/api'
 import { VocabFolderCard } from '@/components/vocabulary/VocabFolderCard'
 import { VocabSetCard } from '@/components/vocabulary/VocabSetCard'
 import { VocabSetDetailModal } from '@/components/vocabulary/VocabSetDetailModal'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
+import { Input } from '@/components/ui/input'
+import { Badge } from '@/components/ui/badge'
+import { cn } from '@/lib/utils'
 import {
   Select,
   SelectTrigger,
@@ -19,6 +24,12 @@ import {
   SelectContent,
   SelectItem,
 } from '@/components/ui/select'
+import {
+  Accordion,
+  AccordionItem,
+  AccordionTrigger,
+  AccordionContent,
+} from '@/components/ui/accordion'
 import type { VocabFolderItem, VocabSetItem } from '@/data/hskVocabData'
 
 interface VocabularyLibraryProps {
@@ -26,6 +37,52 @@ interface VocabularyLibraryProps {
 }
 
 export type Hsk3FilterKey = 'all' | 'hsk1' | 'hsk2' | 'hsk3' | 'hsk4' | 'hsk5' | 'hsk6' | 'hsk7_9'
+
+type VocabWordItem = VocabLevelGroup['words'][number]
+
+const WORDS_PAGE_SIZE = 60
+
+// Memoized row so typing in the search box / opening other accordion items
+// doesn't re-render every single word row already on screen.
+const WordRow = React.memo(function WordRow({
+  word,
+  onPlayAudio,
+}: {
+  word: VocabWordItem
+  onPlayAudio: (text: string) => void
+}) {
+  return (
+    <div className="flex items-center justify-between rounded-lg border bg-muted/30 px-4 py-2.5 transition-colors hover:bg-muted/50">
+      <div className="flex items-center gap-3 min-w-0">
+        <span className="text-lg font-bold text-foreground shrink-0">
+          {word.simplified}
+        </span>
+        {word.traditional && word.traditional !== word.simplified && (
+          <span className="text-xs text-muted-foreground shrink-0">
+            ({word.traditional})
+          </span>
+        )}
+        <span className="text-sm text-primary font-semibold shrink-0">
+          [{word.pinyin}]
+        </span>
+        <span className="text-xs text-muted-foreground truncate hidden sm:inline">
+          {word.meanings.slice(0, 2).join(', ')}
+          {word.meanings.length > 2 && '...'}
+        </span>
+      </div>
+      <button
+        onClick={(e) => {
+          e.stopPropagation()
+          onPlayAudio(word.simplified)
+        }}
+        className="rounded-lg p-2 text-muted-foreground hover:bg-accent hover:text-foreground transition-colors shrink-0"
+        title="Nghe phát âm"
+      >
+        <Volume2 className="h-4 w-4" />
+      </button>
+    </div>
+  )
+})
 
 export const VocabularyLibrary: React.FC<VocabularyLibraryProps> = ({
   searchQuery: propSearchQuery,
@@ -47,6 +104,26 @@ export const VocabularyLibrary: React.FC<VocabularyLibraryProps> = ({
   // Selected deck for detail modal
   const [selectedDeck, setSelectedDeck] = useState<HskDeck | null>(null)
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false)
+
+  // Browse All Words by Level
+  const [vocabByLevel, setVocabByLevel] = useState<VocabLevelGroup[]>([])
+  const [loadingVocabByLevel, setLoadingVocabByLevel] = useState(false)
+  const [showBrowseWords, setShowBrowseWords] = useState(false)
+  const [browseSearch, setBrowseSearch] = useState('')
+  const [debouncedBrowseSearch, setDebouncedBrowseSearch] = useState('')
+  const [expandedLevel, setExpandedLevel] = useState<string>('')
+  const [visibleCounts, setVisibleCounts] = useState<Record<string, number>>({})
+
+  // Debounce the search box so filtering thousands of words doesn't run on every keystroke
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedBrowseSearch(browseSearch), 250)
+    return () => clearTimeout(timer)
+  }, [browseSearch])
+
+  // Reset pagination whenever the search term changes so old counts don't carry over
+  useEffect(() => {
+    setVisibleCounts({})
+  }, [debouncedBrowseSearch])
 
   // 1. Fetch HSK 3.0 statistics from Backend
   useEffect(() => {
@@ -90,6 +167,29 @@ export const VocabularyLibrary: React.FC<VocabularyLibraryProps> = ({
     loadDecks()
   }, [loadDecks])
 
+  // 3. Fetch vocabulary by level for Browse All Words section
+  const loadVocabByLevel = useCallback(async () => {
+    setLoadingVocabByLevel(true)
+    try {
+      const res = await fetchVocabularyByLevel()
+      if (res.success) {
+        setVocabByLevel(res.levels)
+      }
+    } catch (err) {
+      console.error('Failed to fetch vocabulary by level:', err)
+    } finally {
+      setLoadingVocabByLevel(false)
+    }
+  }, [])
+
+  const toggleBrowseWords = () => {
+    const next = !showBrowseWords
+    setShowBrowseWords(next)
+    if (next && vocabByLevel.length === 0) {
+      loadVocabByLevel()
+    }
+  }
+
   // Category filters config with HSK 3.0 tags & counts
   const categories: Array<{ id: Hsk3FilterKey; label: string; count?: number; badge?: string }> = [
     { id: 'all', label: 'Tất cả' },
@@ -117,6 +217,56 @@ export const VocabularyLibrary: React.FC<VocabularyLibraryProps> = ({
     setSelectedDeck(deck)
     setIsModalOpen(true)
   }
+
+  const playAudio = useCallback((text: string) => {
+    if ('speechSynthesis' in window) {
+      const utterance = new SpeechSynthesisUtterance(text)
+      utterance.lang = 'zh-CN'
+      window.speechSynthesis.speak(utterance)
+    }
+  }, [])
+
+  const getVisibleCount = useCallback(
+    (levelKey: string) => visibleCounts[levelKey] ?? WORDS_PAGE_SIZE,
+    [visibleCounts]
+  )
+
+  const showMoreWords = (levelKey: string) => {
+    setVisibleCounts((prev) => ({
+      ...prev,
+      [levelKey]: (prev[levelKey] ?? WORDS_PAGE_SIZE) + WORDS_PAGE_SIZE,
+    }))
+  }
+
+  const levelColors: Record<string, string> = {
+    'newest-1': 'border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-400',
+    'newest-2': 'border-blue-200 bg-blue-50 text-blue-700 dark:border-blue-500/30 dark:bg-blue-500/10 dark:text-blue-400',
+    'newest-3': 'border-violet-200 bg-violet-50 text-violet-700 dark:border-violet-500/30 dark:bg-violet-500/10 dark:text-violet-400',
+    'newest-4': 'border-orange-200 bg-orange-50 text-orange-700 dark:border-orange-500/30 dark:bg-orange-500/10 dark:text-orange-400',
+    'newest-5': 'border-rose-200 bg-rose-50 text-rose-700 dark:border-rose-500/30 dark:bg-rose-500/10 dark:text-rose-400',
+    'newest-6': 'border-cyan-200 bg-cyan-50 text-cyan-700 dark:border-cyan-500/30 dark:bg-cyan-500/10 dark:text-cyan-400',
+    'newest-7': 'border-pink-200 bg-pink-50 text-pink-700 dark:border-pink-500/30 dark:bg-pink-500/10 dark:text-pink-400',
+    'unclassified': 'border-border bg-muted text-muted-foreground',
+  }
+
+  // Filter vocab levels by search query (memoized so it only re-runs when
+  // the actual data or the debounced search term changes, not on every render)
+  const filteredLevels = useMemo(() => {
+    const q = debouncedBrowseSearch.trim().toLowerCase()
+    if (!q) return vocabByLevel
+    return vocabByLevel
+      .map((level) => ({
+        ...level,
+        words: level.words.filter((w) => {
+          return (
+            w.simplified.includes(q) ||
+            w.pinyin.toLowerCase().includes(q) ||
+            w.meanings.some((m) => m.toLowerCase().includes(q))
+          )
+        }),
+      }))
+      .filter((level) => level.words.length > 0)
+  }, [vocabByLevel, debouncedBrowseSearch])
 
   return (
     <div className="flex flex-col gap-6 max-w-7xl mx-auto pb-12">
@@ -278,9 +428,9 @@ export const VocabularyLibrary: React.FC<VocabularyLibraryProps> = ({
 
       {/* Empty State */}
       {!loading && !error && decks.length === 0 && (
-        <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-slate-800 py-16 text-center">
-          <Folder className="h-10 w-10 text-slate-500 mb-2" />
-          <p className="text-base font-semibold text-slate-400">
+        <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-border py-16 text-center">
+          <Folder className="h-10 w-10 text-muted-foreground mb-2" />
+          <p className="text-base font-semibold text-muted-foreground">
             Không tìm thấy bộ bài học HSK nào phù hợp
           </p>
           <Button
@@ -290,12 +440,120 @@ export const VocabularyLibrary: React.FC<VocabularyLibraryProps> = ({
               setActiveCategory('all')
               setFilterStatus('all')
             }}
-            className="mt-4 rounded-xl bg-slate-800 border-slate-700 px-4 py-2 text-xs font-bold text-slate-200 hover:bg-slate-700 transition-colors"
+            className="mt-4"
           >
             Đặt lại bộ lọc
           </Button>
         </div>
       )}
+
+      {/* ============ BROWSE ALL WORDS SECTION ============ */}
+      <div className="border-t border-border pt-6 mt-6">
+        <button
+          onClick={toggleBrowseWords}
+          className="flex w-full items-center justify-between rounded-xl border border-border bg-card p-4 transition-all hover:bg-accent/50"
+        >
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
+              <List className="h-5 w-5" />
+            </div>
+            <div className="text-left">
+              <h2 className="text-base font-bold text-foreground">
+                Xem tất cả từ vựng theo trình độ
+              </h2>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                {vocabByLevel.length > 0
+                  ? `${vocabByLevel.reduce((sum, l) => sum + l.count, 0)} từ vựng được phân loại theo HSK`
+                  : 'Nhấn để tải danh sách tất cả từ vựng trong thư viện'}
+              </p>
+            </div>
+          </div>
+          <ChevronDown className={cn(
+            'h-5 w-5 text-muted-foreground transition-transform duration-200',
+            showBrowseWords && 'rotate-180'
+          )} />
+        </button>
+
+        {showBrowseWords && (
+          <div className="mt-4 space-y-4">
+            {/* Search Bar */}
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                value={browseSearch}
+                onChange={(e) => setBrowseSearch(e.target.value)}
+                placeholder="Tìm từ (Chữ Hán, Pinyin, Nghĩa)..."
+                className="w-full pl-9"
+              />
+            </div>
+
+            {loadingVocabByLevel ? (
+              <div className="flex items-center justify-center py-8 text-primary">
+                <Loader2 className="h-6 w-6 animate-spin" />
+                <span className="ml-2 text-sm">Đang tải danh sách từ vựng...</span>
+              </div>
+            ) : filteredLevels.length > 0 ? (
+              <Accordion
+                type="single"
+                collapsible
+                value={expandedLevel}
+                onValueChange={setExpandedLevel}
+                className="w-full"
+              >
+                {filteredLevels.map((level) => (
+                  <AccordionItem
+                    key={level.levelKey}
+                    value={level.levelKey}
+                    className="border-b border-border last:border-b-0"
+                  >
+                    <AccordionTrigger className="px-3 py-3 hover:no-underline hover:bg-accent/30 rounded-lg transition-colors">
+                      <div className="flex items-center gap-3">
+                        <div className={cn(
+                          'rounded-full px-3 py-1 text-xs font-bold border',
+                          levelColors[level.levelKey] || 'border-border bg-muted text-muted-foreground'
+                        )}>
+                          {level.levelLabel}
+                        </div>
+                        <Badge variant="secondary" className="text-xs">
+                          {level.words.length} từ
+                        </Badge>
+                      </div>
+                    </AccordionTrigger>
+                    <AccordionContent>
+                      <div className="max-h-[420px] overflow-y-auto pr-1">
+                        <div className="flex flex-col gap-1.5 px-1">
+                          {level.words.slice(0, getVisibleCount(level.levelKey)).map((word) => (
+                            <WordRow key={word._id} word={word} onPlayAudio={playAudio} />
+                          ))}
+                        </div>
+                      </div>
+                      {level.words.length > getVisibleCount(level.levelKey) && (
+                        <div className="flex justify-center pt-3">
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => showMoreWords(level.levelKey)}
+                            className="text-xs text-muted-foreground"
+                          >
+                            Xem thêm (còn {level.words.length - getVisibleCount(level.levelKey)} từ)
+                          </Button>
+                        </div>
+                      )}
+                    </AccordionContent>
+                  </AccordionItem>
+                ))}
+              </Accordion>
+            ) : (
+              <p className="py-8 text-center text-sm text-muted-foreground">
+                {vocabByLevel.length > 0
+                  ? `Không tìm thấy từ nào phù hợp với "${browseSearch}"`
+                  : 'Không có dữ liệu từ vựng.'}
+              </p>
+            )}
+          </div>
+        )}
+      </div>
 
       {/* Word List Detail Modal */}
       <VocabSetDetailModal

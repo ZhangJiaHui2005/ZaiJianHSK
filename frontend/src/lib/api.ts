@@ -444,6 +444,41 @@ export async function fetchVocabularyList({
   return res.json()
 }
 
+// ==================== VOCABULARY BY LEVEL ====================
+
+export interface VocabWordSimple {
+  _id: string
+  simplified: string
+  traditional?: string
+  pinyin: string
+  meanings: string[]
+  level: string[]
+  frequency: number
+}
+
+export interface VocabLevelGroup {
+  levelKey: string
+  levelLabel: string
+  count: number
+  words: VocabWordSimple[]
+}
+
+export interface VocabByLevelResponse {
+  success: boolean
+  totalWords: number
+  levels: VocabLevelGroup[]
+}
+
+export async function fetchVocabularyByLevel(): Promise<VocabByLevelResponse> {
+  const res = await fetch(`${API_BASE_URL}/api/vocabulary/by-level`)
+
+  if (!res.ok) {
+    throw new Error("Failed to fetch vocabulary by level")
+  }
+
+  return res.json()
+}
+
 // ==================== COMMUNITY DECKS ====================
 
 function authHeaders(token?: string | null): Record<string, string> {

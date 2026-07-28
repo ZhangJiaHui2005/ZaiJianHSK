@@ -396,6 +396,78 @@ router.get('/', async (req: Request, res: Response) => {
   }
 });
 
+// GET /api/vocabulary/by-level - Lấy tất cả từ vựng nhóm theo HSK level
+router.get('/by-level', async (_req: Request, res: Response) => {
+  try {
+    const allWords = await Vocabulary.find({})
+      .select('simplified traditional pinyin meanings level frequency')
+      .sort({ frequency: 1 })
+      .lean();
+
+    const levelMap: Record<string, typeof allWords> = {
+      'newest-1': [],
+      'newest-2': [],
+      'newest-3': [],
+      'newest-4': [],
+      'newest-5': [],
+      'newest-6': [],
+      'newest-7': [],
+      'unclassified': [],
+    };
+
+    for (const word of allWords) {
+      const levels = word.level as string[];
+      if (!levels || levels.length === 0) {
+        levelMap['unclassified'].push(word);
+      } else {
+        let assigned = false;
+        for (const lvl of levels) {
+          const key = lvl.startsWith('newest-') ? lvl : lvl.replace('new-', 'newest-');
+          if (levelMap[key]) {
+            levelMap[key].push(word);
+            assigned = true;
+            break;
+          }
+        }
+        if (!assigned) {
+          levelMap['unclassified'].push(word);
+        }
+      }
+    }
+
+    const levelLabels: Record<string, string> = {
+      'newest-1': 'HSK 1',
+      'newest-2': 'HSK 2',
+      'newest-3': 'HSK 3',
+      'newest-4': 'HSK 4',
+      'newest-5': 'HSK 5',
+      'newest-6': 'HSK 6',
+      'newest-7': 'HSK 7-9',
+      'unclassified': 'Chưa phân loại',
+    };
+
+    const levels = Object.entries(levelMap)
+      .filter(([_, words]) => words.length > 0)
+      .map(([key, words]) => ({
+        levelKey: key,
+        levelLabel: levelLabels[key] || key,
+        count: words.length,
+        words,
+      }));
+
+    return res.status(200).json({
+      success: true,
+      totalWords: allWords.length,
+      levels,
+    });
+  } catch (error) {
+    if (error instanceof Error) {
+      return res.status(500).json({ success: false, error: error.message });
+    }
+    return res.status(500).json({ success: false, error: 'Internal server error' });
+  }
+});
+
 // GET /api/vocabulary/:id - Chi tiết từ vựng theo ID
 router.get('/:id', async (req: Request, res: Response) => {
   try {
