@@ -686,6 +686,33 @@ export async function deleteCommunityDeckComment(
   return res.json()
 }
 
+// ==================== ADMIN STATS ====================
+
+export interface AdminStats {
+  success: boolean
+  totalUsers: number
+  totalVocabulary: number
+  totalCommunityDecks: number
+  pendingVocabulary: number
+  pendingReports: number
+}
+
+// Admin lấy thống kê tổng quan dashboard
+export async function fetchAdminStats(token: string): Promise<AdminStats> {
+  const res = await fetch(`${API_BASE_URL}/api/admin/stats`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  })
+
+  if (!res.ok) {
+    const errorData = await res.json().catch(() => ({ error: "Unknown error" }))
+    throw new Error(errorData.error || "Failed to fetch admin stats")
+  }
+
+  return res.json()
+}
+
 // ==================== REPORT SYSTEM ====================
 
 export interface DeckReport {
