@@ -4,6 +4,7 @@ import { SignedIn, SignedOut, SignInButton, UserButton, useUser } from '@clerk/c
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
+import { SidebarTrigger } from '@/components/ui/sidebar'
 import { useTheme } from '../theme-provider'
 
 interface TopHeaderProps {
@@ -27,24 +28,28 @@ export const TopHeader: React.FC<TopHeaderProps> = ({
   }
 
   return (
-    <header className="sticky top-0 z-20 flex h-16 w-full items-center justify-between border-b border-border bg-background/95 px-6 backdrop-blur-md">
-      {/* Search Input Bar */}
-      <div className="relative flex flex-1 max-w-md items-center">
-        <Search className="absolute left-3.5 h-4 w-4 text-muted-foreground z-10" />
-        <Input
-          type="text"
-          value={searchQuery}
-          onChange={(e) => onSearchChange?.(e.target.value)}
-          placeholder="Tìm trong thư viện HSK (ví dụ: HSK 4, Reading, 成语...)"
-          className="w-full rounded-xl pl-10 pr-10 text-sm placeholder:text-muted-foreground transition-colors"
-        />
-        <kbd className="absolute right-3 hidden rounded border border-border bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground sm:inline-block">
-          /
-        </kbd>
+    <header className="sticky top-0 z-20 flex h-16 w-full items-center justify-between gap-3 border-b border-border bg-background/95 px-4 backdrop-blur-md md:px-6">
+      <div className="flex min-w-0 flex-1 items-center gap-2">
+        <SidebarTrigger className="md:hidden" />
+
+        {/* Search Input Bar */}
+        <div className="relative flex min-w-0 flex-1 max-w-md items-center">
+          <Search className="absolute left-3.5 z-10 h-4 w-4 text-muted-foreground" />
+          <Input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => onSearchChange?.(e.target.value)}
+            placeholder="Tìm trong thư viện HSK (ví dụ: HSK 4, Reading, 成语...)"
+            className="w-full rounded-xl pl-10 pr-10 text-sm placeholder:text-muted-foreground transition-colors"
+          />
+          <kbd className="absolute right-3 hidden rounded border border-border bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground sm:inline-block">
+            /
+          </kbd>
+        </div>
       </div>
 
       {/* Right Controls */}
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-2 sm:gap-3">
         {/* Dark/Light Mode Toggle */}
         <Button
           type="button"

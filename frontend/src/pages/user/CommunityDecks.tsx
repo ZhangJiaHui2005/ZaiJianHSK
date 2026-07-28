@@ -80,7 +80,7 @@ export default function CommunityDecks() {
   }
 
   return (
-    <div className="mx-auto flex max-w-7xl flex-col gap-6 pb-12">
+    <div className="w-full flex flex-col gap-6 pb-12">
       <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
         <div>
           <span className="text-xs font-bold uppercase tracking-wider text-primary">- CỘNG ĐỒNG</span>

@@ -292,7 +292,7 @@ export default function CommunityDeckDetail() {
   const words = deck.wordIds.filter(isVocabularyWord)
 
   return (
-    <div className="mx-auto flex max-w-5xl flex-col gap-6 pb-12">
+    <div className="mx-auto flex flex-col gap-6 pb-12">
       {/* Report dialog */}
       <Dialog open={showReportDialog} onOpenChange={setShowReportDialog}>
         <DialogContent className="sm:max-w-md">

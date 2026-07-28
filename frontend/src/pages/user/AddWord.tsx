@@ -227,7 +227,7 @@ export default function AddWord() {
   }
 
   return (
-    <div className="mx-auto max-w-2xl">
+    <div className="mx-auto w-full max-w-7xl">
       {/* Header */}
       <div className="mb-8">
         <span className="text-xs font-bold tracking-wider text-primary uppercase">

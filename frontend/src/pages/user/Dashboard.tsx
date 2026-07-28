@@ -5,7 +5,7 @@ export default function UserDashboard() {
   const { user } = useUser()
 
   return (
-    <div className="flex flex-col gap-6 max-w-7xl mx-auto">
+    <div className="flex flex-col gap-6">
       <div>
         <h1 className="text-3xl font-black tracking-tight text-foreground">
           Welcome back, {user?.username || user?.firstName || "User"}!

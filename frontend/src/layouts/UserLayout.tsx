@@ -2,25 +2,24 @@ import { useState } from 'react'
 import { Outlet } from 'react-router-dom'
 import { AppSidebar } from '@/components/layout/AppSidebar'
 import { TopHeader } from '@/components/layout/TopHeader'
+import { SidebarInset, SidebarProvider } from '@/components/ui/sidebar'
 
 export default function UserLayout() {
   const [searchQuery, setSearchQuery] = useState('')
 
   return (
-    <div className="flex min-h-screen bg-background text-foreground font-sans antialiased">
-      {/* Fixed Left Sidebar */}
-      <AppSidebar />
+    <SidebarProvider defaultOpen>
+      <div className="flex min-h-screen w-full flex-1 bg-background font-sans text-foreground antialiased">
+        <AppSidebar />
 
-      {/* Main Content Area */}
-      <div className="flex flex-1 flex-col min-w-0">
-        {/* Top Navigation Header */}
-        <TopHeader searchQuery={searchQuery} onSearchChange={setSearchQuery} />
+        <SidebarInset className="flex min-w-0 flex-1 flex-col">
+          <TopHeader searchQuery={searchQuery} onSearchChange={setSearchQuery} />
 
-        {/* Dynamic Route Outlet */}
-        <main className="flex-1 p-6 lg:p-8">
-          <Outlet context={{ searchQuery }} />
-        </main>
+          <main className="flex-1 p-6 lg:p-8 *:w-full *:max-w-none">
+            <Outlet context={{ searchQuery }} />
+          </main>
+        </SidebarInset>
       </div>
-    </div>
+    </SidebarProvider>
   )
 }
