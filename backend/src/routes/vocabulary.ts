@@ -178,6 +178,41 @@ router.patch(
   },
 );
 
+router.delete(
+  "/pending/:id/permanent",
+  requireAdmin,
+  async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+
+      const pending = await PendingVocabulary.findById(id);
+
+      if (!pending) {
+        return res.status(404).json({ error: "Pending vocabulary not found!" });
+      }
+
+      if (pending.status !== "rejected") {
+        return res.status(400).json({ error: "Only rejected submissions can be permanently deleted" });
+      }
+
+      await PendingVocabulary.findByIdAndDelete(id);
+
+      console.log(
+        `🗑️ Pending vocabulary permanently deleted: ${pending.simplified}`,
+      );
+
+      return res.status(200).json({
+        message: "Pending vocabulary submission permanently deleted",
+      });
+    } catch (error) {
+      if (error instanceof Error) {
+        return res.status(500).json({ error: error.message });
+      }
+      return res.status(500).json({ error: "Internal server error" });
+    }
+  }
+);
+
 // ==================== PUBLIC ROUTES ====================
 
 // GET /api/vocabulary/stats - Thống kê số lượng từ vựng theo từng cấp độ HSK 3.0
