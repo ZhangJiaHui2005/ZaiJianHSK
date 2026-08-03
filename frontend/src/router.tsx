@@ -5,6 +5,7 @@ import UserLayout from "./layouts/UserLayout"
 import AdminLayout from "./layouts/AdminLayout"
 import Dashboard from "./pages/Dashboard"
 import VocabularyLibrary from "./pages/user/VocabularyLibrary"
+import LearningHome from "./pages/user/LearningHome"
 import AddWord from "./pages/user/AddWord"
 import CommunityDecks from "./pages/user/CommunityDecks"
 import CommunityDeckDetail from "./pages/user/CommunityDeckDetail"
@@ -29,9 +30,9 @@ export const router = createBrowserRouter([
         path: "user",
         element: <UserLayout />,
         children: [
-          {
+{
             index: true,
-            element: <VocabularyLibrary />,
+            element: <LearningHome />,
           },
           {
             path: "library",

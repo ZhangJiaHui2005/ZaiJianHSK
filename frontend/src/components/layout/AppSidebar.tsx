@@ -1,6 +1,6 @@
 import React from 'react'
 import { Link, useLocation } from 'react-router-dom'
-import { BookOpen, PlusCircle, Users, Sparkles, Compass } from 'lucide-react'
+import { BookOpen, PlusCircle, Users, Sparkles, Compass, Home } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import {
@@ -24,10 +24,15 @@ interface AppSidebarProps {
 export const AppSidebar: React.FC<AppSidebarProps> = ({ onClose }) => {
   const location = useLocation()
 
-  const navItems = [
+const navItems = [
+    {
+      label: 'Trang chủ',
+      path: '/user',
+      icon: Home,
+    },
     {
       label: 'Thư viện',
-      path: '/user',
+      path: '/user/library',
       icon: BookOpen,
     },
     {

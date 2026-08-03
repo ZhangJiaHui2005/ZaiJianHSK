@@ -268,18 +268,8 @@ export const VocabularyLibrary: React.FC<VocabularyLibraryProps> = ({
       .filter((level) => level.words.length > 0)
   }, [vocabByLevel, debouncedBrowseSearch])
 
-  return (
+return (
     <div className="flex flex-col gap-6 max-w-7xl mx-auto pb-12">
-      {/* Notice Banner */}
-      <Card className="border border-primary/20 bg-primary/5 px-5 py-3 shadow-none">
-        <div className="flex items-center gap-3 text-sm text-foreground">
-          <Sparkles className="h-5 w-5 text-primary shrink-0" />
-          <span>
-            Thư viện tự động chia thành <strong>{totalDecksCount} bộ bài học HSK 3.0</strong>. Bấm vào bộ bài học để xem chi tiết từ vựng!
-          </span>
-        </div>
-      </Card>
-
       {/* Main Section Header */}
       <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between pt-2">
         <div>
