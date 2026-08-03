@@ -2,6 +2,7 @@ import { Router, Request, Response } from "express";
 import Vocabulary from "../models/Vocabulary";
 import PendingVocabulary from "../models/PendingVocabulary";
 import { requireAdmin, attachUser } from "../middleware/auth";
+import { logActivity } from "../lib/activityLogger";
 
 const router = Router();
 
@@ -116,6 +117,15 @@ router.patch(
       pending.reviewedAt = new Date();
       await pending.save();
 
+      await logActivity({
+        user: admin,
+        action: "vocabulary.approve",
+        entityType: "vocabulary",
+        entityId: String(newVocab._id),
+        entityName: pending.simplified,
+        metadata: { pendingId: String(pending._id), level: pending.level },
+      });
+
       console.log(
         `✅ Vocabulary approved: ${pending.simplified} (by ${admin.username})`,
       );
@@ -160,6 +170,15 @@ router.patch(
       pending.reviewedAt = new Date();
       pending.notes = notes || "";
       await pending.save();
+
+      await logActivity({
+        user: admin,
+        action: "vocabulary.reject",
+        entityType: "vocabulary",
+        entityId: String(pending._id),
+        entityName: pending.simplified,
+        metadata: { notes: pending.notes },
+      });
 
       console.log(
         `❌ Vocabulary rejected: ${pending.simplified} (by ${admin.username})`,
@@ -212,6 +231,153 @@ router.delete(
     }
   }
 );
+
+// ==================== ADMIN CRUD ROUTES ====================
+
+// POST /api/vocabulary - Admin tạo từ vựng HSK chuẩn
+router.post("/", requireAdmin, async (req: Request, res: Response) => {
+  try {
+    const admin = (req as any).currentUser;
+    const {
+      simplified,
+      traditional,
+      radical,
+      pinyin,
+      numeric,
+      meanings,
+      level,
+      frequency,
+      pos,
+      classifiers,
+    } = req.body;
+
+    if (!simplified || !pinyin) {
+      return res.status(400).json({ error: "Simplified Chinese and Pinyin are required" });
+    }
+
+    const existing = await Vocabulary.findOne({ simplified });
+    if (existing) {
+      return res.status(400).json({ error: `Word "${simplified}" already exists in the vocabulary` });
+    }
+
+    const word = await Vocabulary.create({
+      simplified,
+      traditional: traditional || "",
+      radical: radical || "",
+      pinyin,
+      numeric: numeric || "",
+      meanings: Array.isArray(meanings) ? meanings : [],
+      level: Array.isArray(level) ? level : [],
+      frequency: typeof frequency === "number" ? frequency : 999999,
+      pos: Array.isArray(pos) ? pos : [],
+      classifiers: Array.isArray(classifiers) ? classifiers : [],
+    });
+
+    await logActivity({
+      user: admin,
+      action: "vocabulary.create",
+      entityType: "vocabulary",
+      entityId: String(word._id),
+      entityName: word.simplified,
+      metadata: { level: word.level },
+    });
+
+    console.log(`✅ Vocabulary created: ${word.simplified} (by ${admin.username})`);
+    return res.status(201).json({ success: true, word });
+  } catch (error) {
+    if (error instanceof Error) {
+      return res.status(500).json({ error: error.message });
+    }
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// PATCH /api/vocabulary/:id - Admin cập nhật từ vựng
+router.patch("/:id", requireAdmin, async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const admin = (req as any).currentUser;
+    const {
+      simplified,
+      traditional,
+      radical,
+      pinyin,
+      numeric,
+      meanings,
+      level,
+      frequency,
+      pos,
+      classifiers,
+    } = req.body;
+
+    const word = await Vocabulary.findById(id);
+    if (!word) {
+      return res.status(404).json({ error: "Word not found" });
+    }
+
+    if (typeof simplified === "string" && simplified.trim()) word.simplified = simplified.trim();
+    if (typeof pinyin === "string" && pinyin.trim()) word.pinyin = pinyin.trim();
+    if (typeof traditional === "string") word.traditional = traditional;
+    if (typeof radical === "string") word.radical = radical;
+    if (typeof numeric === "string") word.numeric = numeric;
+    if (Array.isArray(meanings)) word.meanings = meanings;
+    if (Array.isArray(level)) word.level = level;
+    if (typeof frequency === "number") word.frequency = frequency;
+    if (Array.isArray(pos)) word.pos = pos;
+    if (Array.isArray(classifiers)) word.classifiers = classifiers;
+
+    await word.save();
+
+    await logActivity({
+      user: admin,
+      action: "vocabulary.update",
+      entityType: "vocabulary",
+      entityId: String(word._id),
+      entityName: word.simplified,
+      metadata: { level: word.level },
+    });
+
+    console.log(`✅ Vocabulary updated: ${word.simplified} (by ${admin.username})`);
+    return res.status(200).json({ success: true, word });
+  } catch (error) {
+    if (error instanceof Error) {
+      return res.status(500).json({ error: error.message });
+    }
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// DELETE /api/vocabulary/:id - Admin xoá từ vựng
+router.delete("/:id", requireAdmin, async (req: Request, res: Response) => {
+  try {
+    const id = String(req.params.id);
+    const admin = (req as any).currentUser;
+
+    const word = await Vocabulary.findById(id);
+    if (!word) {
+      return res.status(404).json({ error: "Word not found" });
+    }
+
+    const deletedWord = word.simplified;
+    await word.deleteOne();
+
+    await logActivity({
+      user: admin,
+      action: "vocabulary.delete",
+      entityType: "vocabulary",
+      entityId: id,
+      entityName: deletedWord,
+    });
+
+    console.log(`🗑️ Vocabulary deleted: ${deletedWord} (by ${admin.username})`);
+    return res.status(200).json({ success: true, message: `Word "${deletedWord}" deleted` });
+  } catch (error) {
+    if (error instanceof Error) {
+      return res.status(500).json({ error: error.message });
+    }
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
 
 // ==================== PUBLIC ROUTES ====================
 
@@ -582,6 +748,15 @@ router.post("/pending", attachUser, async (req: Request, res: Response) => {
       pos: pos || [],
       classifiers: classifiers || [],
       userId: currentUser._id,
+    });
+
+    await logActivity({
+      user: currentUser,
+      action: "vocabulary.submit",
+      entityType: "vocabulary",
+      entityId: String(pending._id),
+      entityName: simplified,
+      metadata: { status: "pending", level: level || [] },
     });
 
     console.log(

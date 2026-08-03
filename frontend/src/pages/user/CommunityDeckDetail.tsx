@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react"
 import { Link, useNavigate, useParams } from "react-router-dom"
-import { useAuth } from "@clerk/clerk-react"
+import { useAuth, useUser } from "@clerk/clerk-react"
 import {
   Bookmark,
   GitFork,
@@ -12,6 +12,8 @@ import {
   Volume2,
   ArrowRight,
   Flag,
+  ShieldCheck,
+  Sparkles,
 } from "lucide-react"
 import {
   createCommunityDeckComment,
@@ -23,6 +25,8 @@ import {
   forkCommunityDeck,
   saveCommunityDeck,
   reportCommunityDeck,
+  updateDeckFlags,
+  getUserByClerkId,
   type CommunityDeck,
   type CommunityDeckComment,
   type VocabularyWord,
@@ -54,14 +58,35 @@ export default function CommunityDeckDetail() {
   const { deckId } = useParams()
   const navigate = useNavigate()
   const { getToken, isSignedIn } = useAuth()
+  const { user } = useUser()
+  const [userRole, setUserRole] = useState<string | null>(null)
   const [deck, setDeck] = useState<CommunityDeck | null>(null)
   const [loading, setLoading] = useState(true)
   const [working, setWorking] = useState(false)
+  const [flagWorking, setFlagWorking] = useState(false)
   const [comments, setComments] = useState<CommunityDeckComment[]>([])
   const [commentsLoading, setCommentsLoading] = useState(true)
   const [commentText, setCommentText] = useState("")
   const [commentWorking, setCommentWorking] = useState(false)
   const [error, setError] = useState<string | null>(null)
+
+  // Fetch current user role
+  useEffect(() => {
+    if (!user) return
+    const checkRole = async () => {
+      try {
+        const token = await getToken()
+        if (!token) return
+        const userData = await getUserByClerkId(user.id, token)
+        if (userData) {
+          setUserRole((userData as any).role || "user")
+        }
+      } catch {
+        // silent fail
+      }
+    }
+    checkRole()
+  }, [user, getToken])
 
   // Report state
   const [showReportDialog, setShowReportDialog] = useState(false)
@@ -72,10 +97,39 @@ export default function CommunityDeckDetail() {
 
   // Fork / version history state
   const [forks, setForks] = useState<CommunityDeck[]>([])
-  const [forksLoading, setForksLoading] = useState(false)
   const [lineage, setLineage] = useState<Array<{ _id: string; title: string; username: string }> | null>(null)
   const [lineageLoading, setLineageLoading] = useState(false)
   const [showLineageModal, setShowLineageModal] = useState(false)
+
+  const handleToggleOfficial = async () => {
+    if (!deck) return
+    setFlagWorking(true)
+    try {
+      const token = await getToken()
+      if (!token) return
+      const updated = await updateDeckFlags(deck._id, { isOfficial: !deck.isOfficial }, token)
+      setDeck((current) => current && { ...current, isOfficial: updated.isOfficial })
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Lỗi cập nhật cờ Official")
+    } finally {
+      setFlagWorking(false)
+    }
+  }
+
+  const handleToggleFeatured = async () => {
+    if (!deck) return
+    setFlagWorking(true)
+    try {
+      const token = await getToken()
+      if (!token) return
+      const updated = await updateDeckFlags(deck._id, { isFeatured: !deck.isFeatured }, token)
+      setDeck((current) => current && { ...current, isFeatured: updated.isFeatured })
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Lỗi cập nhật cờ Featured")
+    } finally {
+      setFlagWorking(false)
+    }
+  }
 
   useEffect(() => {
     const loadDeck = async () => {
@@ -119,15 +173,12 @@ export default function CommunityDeckDetail() {
   useEffect(() => {
     const loadForks = async () => {
       if (!deckId) return
-      setForksLoading(true)
       try {
         const token = await getToken()
         const res = await fetchDeckForks(deckId, token)
         setForks(res.forks)
       } catch {
         // silent fail
-      } finally {
-        setForksLoading(false)
       }
     }
     loadForks()
@@ -406,7 +457,21 @@ export default function CommunityDeckDetail() {
           <Link to="/user/community" className="text-sm font-semibold text-primary hover:underline">
             Quay lại cộng đồng
           </Link>
-          <h1 className="mt-2 text-3xl font-black tracking-tight text-foreground sm:text-4xl">{deck.title}</h1>
+          <div className="mt-2 flex flex-wrap items-center gap-3">
+            <h1 className="text-3xl font-black tracking-tight text-foreground sm:text-4xl">{deck.title}</h1>
+            {deck.isOfficial && (
+              <Badge variant="default" className="gap-1 bg-blue-600 text-white text-xs">
+                <ShieldCheck className="h-3.5 w-3.5" />
+                Official Deck
+              </Badge>
+            )}
+            {deck.isFeatured && (
+              <Badge variant="secondary" className="gap-1 bg-amber-500/15 text-amber-600 dark:text-amber-400 text-xs">
+                <Sparkles className="h-3.5 w-3.5 text-amber-500 fill-amber-500" />
+                Featured Deck
+              </Badge>
+            )}
+          </div>
           <p className="mt-2 text-sm text-muted-foreground">
             Tạo bởi <span className="font-semibold text-foreground">{ownerName}</span>
             {deck.sourceDeckId && !lineageLoading && lineage && lineage.length > 1 && (
@@ -421,6 +486,33 @@ export default function CommunityDeckDetail() {
               </span>
             )}
           </p>
+
+          {/* Admin Control Toolbar */}
+          {(userRole === "admin" || userRole === "moderator") && (
+            <div className="mt-3 flex items-center gap-2 p-2 rounded-lg bg-muted/40 border text-xs">
+              <span className="font-semibold text-muted-foreground">Admin Quick Actions:</span>
+              <Button
+                size="sm"
+                variant={deck.isOfficial ? "default" : "outline"}
+                className={deck.isOfficial ? "bg-blue-600 hover:bg-blue-700 h-7 text-xs" : "h-7 text-xs"}
+                onClick={handleToggleOfficial}
+                disabled={flagWorking}
+              >
+                <ShieldCheck className="mr-1 h-3.5 w-3.5" />
+                {deck.isOfficial ? "Bỏ cờ Official" : "Ghim Official"}
+              </Button>
+              <Button
+                size="sm"
+                variant={deck.isFeatured ? "secondary" : "outline"}
+                className={deck.isFeatured ? "bg-amber-500/20 text-amber-700 dark:text-amber-300 h-7 text-xs" : "h-7 text-xs"}
+                onClick={handleToggleFeatured}
+                disabled={flagWorking}
+              >
+                <Sparkles className="mr-1 h-3.5 w-3.5 text-amber-500" />
+                {deck.isFeatured ? "Bỏ cờ Featured" : "Ghim Featured"}
+              </Button>
+            </div>
+          )}
         </div>
         <div className="flex gap-2">
           <Button variant="outline" onClick={handleSave}>

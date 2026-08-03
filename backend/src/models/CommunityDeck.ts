@@ -13,6 +13,8 @@ export interface ICommunityDeck extends Document {
   saveCount: number;
   forkCount: number;
   commentCount: number;
+  isOfficial?: boolean;
+  isFeatured?: boolean;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -81,6 +83,14 @@ const CommunityDeckSchema: Schema = new Schema(
       type: Number,
       default: 0,
       min: 0,
+    },
+    isOfficial: {
+      type: Boolean,
+      default: false,
+    },
+    isFeatured: {
+      type: Boolean,
+      default: false,
     },
   },
   {

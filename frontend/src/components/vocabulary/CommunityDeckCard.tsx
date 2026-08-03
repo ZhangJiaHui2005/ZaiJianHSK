@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom"
-import { Bookmark, GitFork, MessageCircle, Star, UserRound } from "lucide-react"
+import { Bookmark, GitFork, MessageCircle, Star, UserRound, ShieldCheck, Sparkles } from "lucide-react"
 import type { CommunityDeck } from "@/lib/api"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -33,8 +33,20 @@ export function CommunityDeckCard({ deck, onToggleSave }: CommunityDeckCardProps
             </CardTitle>
           </div>
 
-          <div className="flex items-center gap-1.5">
-            {deck.saveCount >= 5 && (
+          <div className="flex flex-wrap items-center justify-end gap-1">
+            {deck.isOfficial && (
+              <Badge variant="default" className="gap-1 bg-blue-600 text-white text-[10px] px-2 py-0">
+                <ShieldCheck className="h-3 w-3" />
+                Official
+              </Badge>
+            )}
+            {deck.isFeatured && (
+              <Badge variant="secondary" className="gap-1 bg-amber-500/15 text-amber-600 dark:text-amber-400 text-[10px] px-2 py-0">
+                <Sparkles className="h-3 w-3 text-amber-500 fill-amber-500" />
+                Featured
+              </Badge>
+            )}
+            {!deck.isOfficial && !deck.isFeatured && deck.saveCount >= 5 && (
               <Badge variant="secondary" className="gap-1 bg-amber-500/10 text-amber-600 text-[10px] px-2 py-0">
                 <Star className="h-3 w-3 fill-amber-500" />
                 Nổi bật

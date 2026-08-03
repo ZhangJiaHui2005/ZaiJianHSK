@@ -16,6 +16,8 @@ import AdminUsers from "./pages/admin/Users"
 import AdminPendingVocabulary from "./pages/admin/PendingVocabulary"
 import AdminReports from "./pages/admin/Reports"
 import AdminCommunityDecks from "./pages/admin/CommunityDecks"
+import AdminActivityLogs from "./pages/admin/ActivityLogs"
+import AdminVocabularyManagement from "./pages/admin/VocabularyManagement"
 
 export const router = createBrowserRouter([
   {
@@ -79,6 +81,14 @@ export const router = createBrowserRouter([
           {
             path: "users",
             element: <AdminUsers />,
+          },
+          {
+            path: "vocabulary",
+            element: <AdminVocabularyManagement />,
+          },
+          {
+            path: "activity",
+            element: <AdminActivityLogs />,
           },
           {
             path: "pending-vocabulary",

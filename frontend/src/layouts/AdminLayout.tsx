@@ -24,10 +24,13 @@ import {
 } from "@/components/ui/sidebar"
 import { Skeleton } from "@/components/ui/skeleton"
 import { LayoutDashboard, LogOut, Users, FileClock, Flag, Layers } from "lucide-react"
+import { LayoutDashboard, LogOut, Users, FileClock, Flag, Activity, BookOpen } from "lucide-react"
 
 const navItems = [
   { path: "/admin", label: "Dashboard", icon: LayoutDashboard },
   { path: "/admin/users", label: "Manage Users", icon: Users },
+  { path: "/admin/vocabulary", label: "Vocabulary", icon: BookOpen },
+  { path: "/admin/activity", label: "Activity Logs", icon: Activity },
   { path: "/admin/pending-vocabulary", label: "Pending", icon: FileClock },
   { path: "/admin/community-decks", label: "Community Decks", icon: Layers },
   { path: "/admin/reports", label: "Reports", icon: Flag },

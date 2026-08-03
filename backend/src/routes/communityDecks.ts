@@ -5,6 +5,7 @@ import CommunityDeckComment from "../models/CommunityDeckComment.js";
 import SavedDeck from "../models/SavedDeck.js";
 import Vocabulary from "../models/Vocabulary.js";
 import { attachUser } from "../middleware/auth.js";
+import { logActivity } from "../lib/activityLogger.js";
 
 const router = Router();
 
@@ -288,6 +289,16 @@ router.post("/", attachUser, async (req: Request, res: Response) => {
     });
 
     const populated = await deck.populate("ownerId", "username email");
+
+    await logActivity({
+      user: currentUser,
+      action: "deck.create",
+      entityType: "community_deck",
+      entityId: String(deck._id),
+      entityName: deck.title,
+      metadata: { visibility: deck.visibility, wordsCount: deck.wordIds.length },
+    });
+
     return res.status(201).json({ success: true, deck: { ...populated.toObject(), isSaved: false } });
   } catch (error) {
     if (error instanceof Error) {
@@ -354,6 +365,15 @@ router.post("/:id/publish", attachUser, async (req: Request, res: Response) => {
     deck.status = "published";
     deck.visibility = "public";
     await deck.save();
+
+    await logActivity({
+      user: currentUser,
+      action: "deck.publish",
+      entityType: "community_deck",
+      entityId: String(deck._id),
+      entityName: deck.title,
+      metadata: { wordsCount: deck.wordIds.length },
+    });
 
     const populated = await deck.populate("ownerId", "username email");
     return res.status(200).json({ success: true, deck: { ...populated.toObject(), isSaved: false } });
@@ -440,6 +460,16 @@ router.post("/:id/fork", attachUser, async (req: Request, res: Response) => {
     await source.save();
 
     const populated = await forked.populate("ownerId", "username email");
+
+    await logActivity({
+      user: currentUser,
+      action: "deck.fork",
+      entityType: "community_deck",
+      entityId: String(forked._id),
+      entityName: forked.title,
+      metadata: { sourceDeckId: String(source._id) },
+    });
+
     return res.status(201).json({ success: true, deck: { ...populated.toObject(), isSaved: false } });
   } catch (error) {
     if (error instanceof Error) {
@@ -569,6 +599,48 @@ router.post("/:id/report", attachUser, async (req: Request, res: Response) => {
         status: report.status,
         createdAt: report.createdAt,
       },
+    });
+  } catch (error) {
+    if (error instanceof Error) return res.status(500).json({ success: false, error: error.message });
+    return res.status(500).json({ success: false, error: "Internal server error" });
+  }
+});
+
+// PATCH /api/community-decks/:id/flags - Admin toggle isOfficial / isFeatured
+router.patch("/:id/flags", attachUser, async (req: Request, res: Response) => {
+  try {
+    const currentUser = (req as any).currentUser;
+    if (!currentUser) {
+      return res.status(401).json({ error: "User not authenticated" });
+    }
+    if (currentUser.role !== "admin" && currentUser.role !== "moderator") {
+      return res.status(403).json({ error: "Admin or moderator access required" });
+    }
+
+    const id = String(req.params.id);
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ error: "Invalid deck ID" });
+    }
+
+    const { isOfficial, isFeatured } = req.body;
+    const updateData: Record<string, any> = {};
+
+    if (typeof isOfficial === "boolean") updateData.isOfficial = isOfficial;
+    if (typeof isFeatured === "boolean") updateData.isFeatured = isFeatured;
+
+    const deck = await CommunityDeck.findByIdAndUpdate(id, updateData, { new: true })
+      .populate("ownerId", "username email")
+      .lean();
+
+    if (!deck) {
+      return res.status(404).json({ error: "Community deck not found" });
+    }
+
+    console.log(`✅ Deck flags updated: ${deck.title} -> official:${deck.isOfficial}, featured:${deck.isFeatured}`);
+    return res.status(200).json({
+      success: true,
+      message: "Deck flags updated successfully",
+      deck,
     });
   } catch (error) {
     if (error instanceof Error) return res.status(500).json({ success: false, error: error.message });

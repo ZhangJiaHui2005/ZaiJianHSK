@@ -2,6 +2,7 @@ import { Router, Request, Response } from 'express';
 import { createClerkClient } from '@clerk/backend';
 import User from '../models/Users';
 import { requireAdmin, requireSelfOrAdmin } from '../middleware/auth';
+import { logActivity } from '../lib/activityLogger';
 
 const router = Router();
 
@@ -36,6 +37,15 @@ router.post('/', async (req: Request, res: Response) => {
       clerkId,
       username: username || `user_${clerkId.slice(-8)}`,
       email,
+    });
+
+    await logActivity({
+      user: newUser,
+      action: "user.register",
+      entityType: "user",
+      entityId: String(newUser._id),
+      entityName: newUser.username,
+      metadata: { email: newUser.email },
     });
 
     console.log(`✅ User created: ${newUser.username} (${newUser.email}) role: ${newUser.role}`);
@@ -109,6 +119,40 @@ router.patch('/:clerkId/role', requireAdmin, async (req: Request, res: Response)
     console.log(`✅ Role updated: ${user.username} -> ${role}`);
     return res.status(200).json({
       message: 'Role updated successfully',
+      user,
+    });
+  } catch (error) {
+    if (error instanceof Error) {
+      return res.status(500).json({ error: error.message });
+    }
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// PATCH /api/users/:clerkId/status - Cập nhật trạng thái user (active / banned) (admin)
+router.patch('/:clerkId/status', requireAdmin, async (req: Request, res: Response) => {
+  try {
+    const clerkId = String(req.params.clerkId);
+    const { status } = req.body;
+
+    const validStatuses = ['active', 'banned'];
+    if (!validStatuses.includes(status)) {
+      return res.status(400).json({ error: `Invalid status. Must be one of: ${validStatuses.join(', ')}` });
+    }
+
+    const user = await User.findOneAndUpdate(
+      { clerkId },
+      { status },
+      { new: true }
+    );
+
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    console.log(`✅ Status updated: ${user.username} -> ${status}`);
+    return res.status(200).json({
+      message: 'Status updated successfully',
       user,
     });
   } catch (error) {

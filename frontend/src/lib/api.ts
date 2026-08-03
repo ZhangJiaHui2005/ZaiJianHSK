@@ -13,6 +13,8 @@ export interface UserResponse {
     clerkId: string
     username: string
     email: string
+    role?: string
+    status?: "active" | "banned"
     createdAt: string
     updatedAt: string
   }
@@ -105,6 +107,8 @@ export interface CommunityDeck {
   forkCount: number
   commentCount: number
   isSaved: boolean
+  isOfficial?: boolean
+  isFeatured?: boolean
   createdAt: string
   updatedAt: string
 }
@@ -188,6 +192,54 @@ export async function deleteUser(clerkId: string, token: string): Promise<void> 
     const errorData = await res.json().catch(() => ({ error: "Unknown error" }))
     throw new Error(errorData.error || "Failed to delete user")
   }
+}
+
+// Cập nhật trạng thái user (active / banned) (admin)
+export async function updateUserStatus(
+  clerkId: string,
+  status: "active" | "banned",
+  token: string
+): Promise<UserResponse["user"]> {
+  const res = await fetch(`${API_BASE_URL}/api/users/${clerkId}/status`, {
+    method: "PATCH",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({ status }),
+  })
+
+  if (!res.ok) {
+    const errorData = await res.json().catch(() => ({ error: "Unknown error" }))
+    throw new Error(errorData.error || "Failed to update user status")
+  }
+
+  const data = await res.json()
+  return data.user
+}
+
+// Cập nhật cờ isOfficial / isFeatured của bộ từ cộng đồng (admin)
+export async function updateDeckFlags(
+  deckId: string,
+  flags: { isOfficial?: boolean; isFeatured?: boolean },
+  token: string
+): Promise<CommunityDeck> {
+  const res = await fetch(`${API_BASE_URL}/api/community-decks/${deckId}/flags`, {
+    method: "PATCH",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(flags),
+  })
+
+  if (!res.ok) {
+    const errorData = await res.json().catch(() => ({ error: "Unknown error" }))
+    throw new Error(errorData.error || "Failed to update deck flags")
+  }
+
+  const data = await res.json()
+  return data.deck
 }
 
 // Lấy thống kê số từ vựng HSK 3.0 từng cấp độ từ MongoDB
@@ -959,4 +1011,186 @@ export async function hideDeckAndResolveReport(
     throw new Error(errorData.error || "Failed to hide deck")
   }
   return res.json()
+}
+
+// ==================== VOCABULARY CRUD (ADMIN) ====================
+
+export interface VocabularyMutationPayload {
+  simplified: string
+  traditional?: string
+  radical?: string
+  pinyin: string
+  numeric?: string
+  meanings: string[]
+  level: string[]
+  frequency: number
+  pos: string[]
+  classifiers: string[]
+}
+
+// Admin tạo từ vựng HSK chuẩn
+export async function createVocabulary(
+  token: string,
+  payload: VocabularyMutationPayload
+): Promise<{ success: boolean; word: VocabularyWord }> {
+  const res = await fetch(`${API_BASE_URL}/api/vocabulary`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      ...authHeaders(token),
+    },
+    body: JSON.stringify(payload),
+  })
+  if (!res.ok) {
+    const errorData = await res.json().catch(() => ({ error: "Unknown error" }))
+    throw new Error(errorData.error || "Failed to create vocabulary")
+  }
+  return res.json()
+}
+
+// Admin cập nhật từ vựng
+export async function updateVocabulary(
+  token: string,
+  wordId: string,
+  payload: VocabularyMutationPayload
+): Promise<{ success: boolean; word: VocabularyWord }> {
+  const res = await fetch(`${API_BASE_URL}/api/vocabulary/${wordId}`, {
+    method: "PATCH",
+    headers: {
+      "Content-Type": "application/json",
+      ...authHeaders(token),
+    },
+    body: JSON.stringify(payload),
+  })
+  if (!res.ok) {
+    const errorData = await res.json().catch(() => ({ error: "Unknown error" }))
+    throw new Error(errorData.error || "Failed to update vocabulary")
+  }
+  return res.json()
+}
+
+// Admin xoá từ vựng
+export async function deleteVocabulary(
+  token: string,
+  wordId: string
+): Promise<{ success: boolean; message: string }> {
+  const res = await fetch(`${API_BASE_URL}/api/vocabulary/${wordId}`, {
+    method: "DELETE",
+    headers: authHeaders(token),
+  })
+  if (!res.ok) {
+    const errorData = await res.json().catch(() => ({ error: "Unknown error" }))
+    throw new Error(errorData.error || "Failed to delete vocabulary")
+  }
+  return res.json()
+}
+
+// ==================== ANALYTICS & ACTIVITY LOG ====================
+
+export interface UserGrowthPoint {
+  date: string
+  label: string
+  newUsers: number
+  totalUsers: number
+}
+
+export interface DailyActivityPoint {
+  date: string
+  label: string
+  actions: number
+}
+
+export interface ActionBreakdown {
+  action: string
+  count: number
+}
+
+export interface AnalyticsResponse {
+  success: boolean
+  userGrowth: UserGrowthPoint[]
+  dailyActivity: DailyActivityPoint[]
+  actionBreakdown: ActionBreakdown[]
+  totals: {
+    totalUsers: number
+    totalVocabulary: number
+    totalCommunityDecks: number
+    totalActions: number
+  }
+}
+
+// Admin lấy dữ liệu analytics (User Growth + Daily Study Activity)
+export async function fetchAnalytics(token: string): Promise<AnalyticsResponse> {
+  const res = await fetch(`${API_BASE_URL}/api/admin/activity/analytics`, {
+    headers: authHeaders(token),
+  })
+  if (!res.ok) {
+    const errorData = await res.json().catch(() => ({ error: "Unknown error" }))
+    throw new Error(errorData.error || "Failed to fetch analytics")
+  }
+  return res.json()
+}
+
+export interface ActivityLogEntry {
+  _id: string
+  user?: { _id: string; username: string; email?: string } | null
+  username: string
+  action: string
+  entityType: string
+  entityId?: string
+  entityName?: string
+  metadata?: Record<string, any>
+  createdAt: string
+  updatedAt: string
+}
+
+export interface ActivityLogListResponse {
+  success: boolean
+  total: number
+  page: number
+  limit: number
+  totalPages: number
+  logs: ActivityLogEntry[]
+}
+
+// Admin lấy danh sách activity log (stream)
+export async function fetchActivityLogs(
+  token: string,
+  params: {
+    action?: string
+    entityType?: string
+    search?: string
+    page?: number
+    limit?: number
+    days?: number
+  }
+): Promise<ActivityLogListResponse> {
+  const searchParams = new URLSearchParams()
+  if (params.action) searchParams.append("action", params.action)
+  if (params.entityType) searchParams.append("entityType", params.entityType)
+  if (params.search) searchParams.append("search", params.search)
+  if (params.page) searchParams.append("page", String(params.page))
+  if (params.limit) searchParams.append("limit", String(params.limit))
+  if (params.days) searchParams.append("days", String(params.days))
+
+  const res = await fetch(`${API_BASE_URL}/api/admin/activity?${searchParams.toString()}`, {
+    headers: authHeaders(token),
+  })
+  if (!res.ok) {
+    const errorData = await res.json().catch(() => ({ error: "Unknown error" }))
+    throw new Error(errorData.error || "Failed to fetch activity logs")
+  }
+  return res.json()
+}
+
+// Admin lấy danh sách các action types (cho filter UI)
+export async function fetchActivityActions(token: string): Promise<string[]> {
+  const res = await fetch(`${API_BASE_URL}/api/admin/activity/actions`, {
+    headers: authHeaders(token),
+  })
+  if (!res.ok) {
+    const errorData = await res.json().catch(() => ({ error: "Unknown error" }))
+    throw new Error(errorData.error || "Failed to fetch activity actions")
+  }
+  const data = await res.json()
+  return data.actions || []
 }
