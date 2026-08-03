@@ -10,7 +10,6 @@ import {
   Send,
   Trash2,
   Volume2,
-  X,
   ArrowRight,
   Flag,
 } from "lucide-react"
@@ -509,10 +508,10 @@ export default function CommunityDeckDetail() {
       {/* Forks list */}
       {forks.length > 0 && (
         <section>
-          <div className="flex items-center gap-2">
-            <GitFork className="h-5 w-5 text-primary" />
-            <h2 className="text-xl font-black">Bản sao ({forks.length})</h2>
-          </div>
+              <div className="flex items-center gap-2">
+                {forksLoading ? <Loader2 className="h-4 w-4 animate-spin text-primary" /> : <GitFork className="h-5 w-5 text-primary" />}
+                <h2 className="text-xl font-black">Bản sao ({forks.length})</h2>
+              </div>
           <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {forks.map((fork) => {
               const forkOwner = typeof fork.ownerId === "string" ? "Người học" : fork.ownerId.username

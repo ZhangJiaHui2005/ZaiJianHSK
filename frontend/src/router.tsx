@@ -14,6 +14,7 @@ import AdminDashboard from "./pages/admin/Dashboard"
 import AdminUsers from "./pages/admin/Users"
 import AdminPendingVocabulary from "./pages/admin/PendingVocabulary"
 import AdminReports from "./pages/admin/Reports"
+import AdminCommunityDecks from "./pages/admin/CommunityDecks"
 
 export const router = createBrowserRouter([
   {
@@ -85,6 +86,10 @@ export const router = createBrowserRouter([
           {
             path: "reports",
             element: <AdminReports />,
+          },
+          {
+            path: "community-decks",
+            element: <AdminCommunityDecks />,
           },
         ],
       },

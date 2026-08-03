@@ -9,19 +9,14 @@ import {
   CardContent,
 } from "@/components/ui/card"
 import {
-  Table,
-  TableHeader,
-  TableBody,
-  TableRow,
-  TableHead,
-  TableCell,
+  
 } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
-import { InputGroup, InputGroupAddon, InputGroupInput } from "@/components/ui/input-group"
+ 
 import { cn } from "@/lib/utils"
-import { Flag, Search, EyeOff, CheckCircle, XCircle, ExternalLink, AlertTriangle } from "lucide-react"
+import { Flag, EyeOff, CheckCircle, XCircle, AlertTriangle } from "lucide-react"
 
 const reasonLabels: Record<string, string> = {
   spam: "Spam",

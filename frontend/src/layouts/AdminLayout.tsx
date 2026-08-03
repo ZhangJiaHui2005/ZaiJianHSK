@@ -23,12 +23,13 @@ import {
   SidebarInset,
 } from "@/components/ui/sidebar"
 import { Skeleton } from "@/components/ui/skeleton"
-import { LayoutDashboard, LogOut, Users, FileClock, Flag } from "lucide-react"
+import { LayoutDashboard, LogOut, Users, FileClock, Flag, Layers } from "lucide-react"
 
 const navItems = [
   { path: "/admin", label: "Dashboard", icon: LayoutDashboard },
   { path: "/admin/users", label: "Manage Users", icon: Users },
   { path: "/admin/pending-vocabulary", label: "Pending", icon: FileClock },
+  { path: "/admin/community-decks", label: "Community Decks", icon: Layers },
   { path: "/admin/reports", label: "Reports", icon: Flag },
 ]
 
@@ -44,15 +45,12 @@ export default function AdminLayout() {
 
   useEffect(() => {
     if (!isLoaded) return
-
     if (!isSignedIn) {
       setRedirectTo("/")
       setLoading(false)
       return
     }
-
     if (!user) return
-
     const fetchRole = async () => {
       try {
         const token = await getToken()
@@ -76,12 +74,9 @@ export default function AdminLayout() {
         setLoading(false)
       }
     }
-
     fetchRole()
   }, [user, isLoaded, isSignedIn, getToken])
 
-  // Perform redirects via navigate() instead of <Navigate> to avoid
-  // React Router v7 throwing ErrorResponseImpl for redirects
   useEffect(() => {
     if (redirectTo) {
       navigate(redirectTo, { replace: true })
@@ -96,7 +91,6 @@ export default function AdminLayout() {
     )
   }
 
-  // Don't render the admin layout if we're about to redirect
   if (redirectTo || !isSignedIn || userRole !== "admin") {
     return (
       <div className="flex min-h-svh items-center justify-center gap-4">
@@ -109,16 +103,10 @@ export default function AdminLayout() {
     <SidebarProvider defaultOpen={true}>
       <Sidebar collapsible="icon">
         <SidebarHeader>
-          <Link
-            to="/"
-            className="flex items-center gap-2 px-2 text-lg font-semibold"
-          >
-            <span className="truncate group-data-[collapsible=icon]:hidden">
-              ZaiJianHSK Admin
-            </span>
+          <Link to="/admin" className="flex items-center gap-2 px-2 text-lg font-semibold">
+            <span className="truncate group-data-[collapsible=icon]:hidden">ZaiJianHSK Admin</span>
           </Link>
         </SidebarHeader>
-
         <SidebarContent>
           <SidebarGroup>
             <SidebarGroupContent>
@@ -142,12 +130,11 @@ export default function AdminLayout() {
             </SidebarGroupContent>
           </SidebarGroup>
         </SidebarContent>
-
         <SidebarFooter>
           <SidebarMenu>
             <SidebarMenuItem>
               <DropdownMenu>
-                <DropdownMenuTrigger className={"w-full"}>
+                <DropdownMenuTrigger className="w-full">
                   <span className="flex w-full cursor-pointer items-center justify-between gap-3 rounded-md px-2 py-2 text-left hover:bg-accent">
                     <span className="flex items-center gap-3">
                       <UserButton />
@@ -156,10 +143,7 @@ export default function AdminLayout() {
                   </span>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" side="right" className="w-48">
-                  <DropdownMenuItem
-                    onClick={() => signOut(() => window.location.assign("/"))}
-                    className="cursor-pointer"
-                  >
+                  <DropdownMenuItem onClick={() => signOut(() => window.location.assign("/"))} className="cursor-pointer">
                     <LogOut className="mr-2 h-4 w-4" />
                     Logout
                   </DropdownMenuItem>
@@ -169,15 +153,11 @@ export default function AdminLayout() {
           </SidebarMenu>
         </SidebarFooter>
       </Sidebar>
-
       <SidebarInset>
         <header className="flex h-12 items-center gap-2 border-b px-4">
           <SidebarTrigger />
-          <span className="text-sm font-medium text-muted-foreground">
-            Admin Panel
-          </span>
+          <span className="text-sm font-medium text-muted-foreground">Admin Panel</span>
         </header>
-
         <main className="flex-1 p-6">
           <Outlet />
         </main>

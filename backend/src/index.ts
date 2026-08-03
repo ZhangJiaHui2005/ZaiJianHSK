@@ -8,13 +8,21 @@ import deckRoutes from './routes/deck.js';
 import communityDeckRoutes from './routes/communityDecks.js';
 import adminReportRoutes from './routes/adminReports.js';
 import adminStatsRoutes from './routes/adminStats.js';
+import adminCommunityDecksRoutes from './routes/adminCommunityDecks.js';
 import { clerkMiddleware } from '@clerk/express';
 
 const app = express();
 const port = process.env.PORT || 3000;
 
 // Middleware
-app.use(cors({ origin: 'http://localhost:5173' }));
+app.use(
+  cors({
+    origin: 'http://localhost:5173',
+    credentials: true,
+    methods: ['GET', 'POST', 'PATCH', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
+  })
+);
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(clerkMiddleware());
@@ -26,6 +34,7 @@ app.use('/api/decks', deckRoutes);
 app.use('/api/community-decks', communityDeckRoutes);
 app.use('/api/admin/reports', adminReportRoutes);
 app.use('/api/admin/stats', adminStatsRoutes);
+app.use('/api/admin/community-decks', adminCommunityDecksRoutes);
 
 app.get('/', (_req: Request, res: Response) => {
   res.json({ message: 'ZaiJianHSK Backend API' });

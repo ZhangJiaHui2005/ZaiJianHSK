@@ -713,6 +713,136 @@ export async function fetchAdminStats(token: string): Promise<AdminStats> {
   return res.json()
 }
 
+// ==================== ADMIN COMMUNITY DECKS ====================
+
+export interface AdminCommunityDeck {
+  _id: string
+  title: string
+  description: string
+  ownerId: {
+    _id: string
+    username: string
+    email?: string
+  }
+  wordIds: Array<{ _id: string; simplified: string; pinyin: string }>
+  visibility: "private" | "public" | "unlisted"
+  status: "draft" | "published" | "hidden"
+  tags: string[]
+  hskLevels: string[]
+  saveCount: number
+  forkCount: number
+  commentCount: number
+  createdAt: string
+  updatedAt: string
+}
+
+export interface AdminCommunityDecksResponse {
+  success: boolean
+  total: number
+  page: number
+  limit: number
+  totalPages: number
+  decks: AdminCommunityDeck[]
+}
+
+// Admin lấy danh sách tất cả community decks
+export async function fetchAdminCommunityDecks(
+  token: string,
+  params: {
+    search?: string
+    visibility?: string
+    status?: string
+    page?: number
+    limit?: number
+    sort?: string
+  }
+): Promise<AdminCommunityDecksResponse> {
+  const searchParams = new URLSearchParams()
+  if (params.search) searchParams.append("search", params.search)
+  if (params.visibility) searchParams.append("visibility", params.visibility)
+  if (params.status) searchParams.append("status", params.status)
+  if (params.page) searchParams.append("page", String(params.page))
+  if (params.limit) searchParams.append("limit", String(params.limit))
+  if (params.sort) searchParams.append("sort", params.sort)
+
+  const res = await fetch(
+    `${API_BASE_URL}/api/admin/community-decks?${searchParams.toString()}`,
+    {
+      headers: { Authorization: `Bearer ${token}` },
+    }
+  )
+
+  if (!res.ok) {
+    const errorData = await res.json().catch(() => ({ error: "Unknown error" }))
+    throw new Error(errorData.error || "Failed to fetch community decks")
+  }
+
+  return res.json()
+}
+
+// Admin xoá vĩnh viễn community deck
+export async function adminDeleteCommunityDeck(
+  token: string,
+  deckId: string
+): Promise<{ success: boolean; message: string }> {
+  const res = await fetch(
+    `${API_BASE_URL}/api/admin/community-decks/${deckId}`,
+    {
+      method: "DELETE",
+      headers: { Authorization: `Bearer ${token}` },
+    }
+  )
+
+  if (!res.ok) {
+    const errorData = await res.json().catch(() => ({ error: "Unknown error" }))
+    throw new Error(errorData.error || "Failed to delete community deck")
+  }
+
+  return res.json()
+}
+
+// Admin ẩn community deck
+export async function adminHideCommunityDeck(
+  token: string,
+  deckId: string
+): Promise<{ success: boolean; message: string }> {
+  const res = await fetch(
+    `${API_BASE_URL}/api/admin/community-decks/${deckId}/hide`,
+    {
+      method: "PATCH",
+      headers: { Authorization: `Bearer ${token}` },
+    }
+  )
+
+  if (!res.ok) {
+    const errorData = await res.json().catch(() => ({ error: "Unknown error" }))
+    throw new Error(errorData.error || "Failed to hide community deck")
+  }
+
+  return res.json()
+}
+
+// Admin bỏ ẩn community deck
+export async function adminUnhideCommunityDeck(
+  token: string,
+  deckId: string
+): Promise<{ success: boolean; message: string }> {
+  const res = await fetch(
+    `${API_BASE_URL}/api/admin/community-decks/${deckId}/unhide`,
+    {
+      method: "PATCH",
+      headers: { Authorization: `Bearer ${token}` },
+    }
+  )
+
+  if (!res.ok) {
+    const errorData = await res.json().catch(() => ({ error: "Unknown error" }))
+    throw new Error(errorData.error || "Failed to unhide community deck")
+  }
+
+  return res.json()
+}
+
 // ==================== REPORT SYSTEM ====================
 
 export interface DeckReport {

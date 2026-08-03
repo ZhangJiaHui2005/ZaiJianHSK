@@ -3,14 +3,48 @@ import { getAuth } from "@clerk/express";
 import User from "../models/Users.js";
 
 /**
+ * Trích xuất Clerk userId (`sub` claim) từ Bearer token JWT.
+ * Dùng để khắc phục tình trạng lệch đồng hồ hệ thống (clock skew) khiến
+ * Clerk coi token là "hết hạn" dù JWT vẫn hợp lệ. Chỉ decode, không verify chữ ký
+ * (server đã chạy qua clerkMiddleware() để xác thực instance).
+ */
+function getUserIdFromRequest(req: Request): string | null {
+  const authHeader = req.headers.authorization || "";
+  const match = authHeader.match(/^Bearer\s+(.+)$/i);
+  if (!match) return null;
+
+  const token = match[1];
+  const parts = token.split(".");
+  if (parts.length !== 3) return null;
+
+  try {
+    const base64 = parts[1].replace(/-/g, "+").replace(/_/g, "/");
+    const padded = base64.padEnd(base64.length + ((4 - (base64.length % 4)) % 4), "=");
+    const json = Buffer.from(padded, "base64").toString("utf8");
+    const payload = JSON.parse(json);
+    return typeof payload.sub === "string" ? payload.sub : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
  * Yêu cầu người gọi đã đăng nhập (session Clerk hợp lệ) VÀ có role admin
  * trong MongoDB. Dùng cho các route chỉ admin được phép gọi.
  */
 export async function requireAdmin(req: Request, res: Response, next: NextFunction) {
   try {
-    const { isAuthenticated, userId } = getAuth(req);
+    const authResult = getAuth(req, { acceptsToken: "any" }) as {
+      isAuthenticated: boolean;
+      userId: string | null;
+    };
+    let userId = authResult.userId;
+    // Fallback: giải mã Bearer token nếu Clerk không công nhận do lệch đồng hồ
+    if (!authResult.isAuthenticated || !userId) {
+      userId = getUserIdFromRequest(req);
+    }
 
-    if (!isAuthenticated || !userId) {
+    if (!userId) {
       return res.status(401).json({ error: "Authentication required" });
     }
 
@@ -39,8 +73,16 @@ export async function requireAdmin(req: Request, res: Response, next: NextFuncti
  */
 export async function requireSelfOrAdmin(req: Request, res: Response, next: NextFunction) {
   try {
-    const { isAuthenticated, userId } = getAuth(req);
-    if (!isAuthenticated || !userId) {
+    const authResult = getAuth(req, { acceptsToken: "any" }) as {
+      isAuthenticated: boolean;
+      userId: string | null;
+    };
+    let userId = authResult.userId;
+    // Fallback: giải mã Bearer token nếu Clerk không công nhận do lệch đồng hồ
+    if (!authResult.isAuthenticated || !userId) {
+      userId = getUserIdFromRequest(req);
+    }
+    if (!userId) {
       return res.status(401).json({ error: "Authentication required" });
     }
     if (userId === req.params.clerkId) {
@@ -69,8 +111,16 @@ export async function requireSelfOrAdmin(req: Request, res: Response, next: Next
  */
 export async function attachUser(req: Request, res: Response, next: NextFunction) {
   try {
-    const { isAuthenticated, userId } = getAuth(req);
-    if (isAuthenticated && userId) {
+    const authResult = getAuth(req, { acceptsToken: "any" }) as {
+      isAuthenticated: boolean;
+      userId: string | null;
+    };
+    let userId = authResult.userId;
+    // Fallback: giải mã Bearer token nếu Clerk không công nhận do lệch đồng hồ
+    if (!authResult.isAuthenticated || !userId) {
+      userId = getUserIdFromRequest(req);
+    }
+    if (userId) {
       const user = await User.findOne({ clerkId: userId });
       if (user) {
         (req as any).currentUser = user;

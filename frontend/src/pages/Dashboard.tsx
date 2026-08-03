@@ -1,5 +1,5 @@
-import React, { useState } from 'react'
-import { useUser, SignedOut, SignedIn, SignInButton } from "@clerk/clerk-react"
+import { useState } from 'react'
+import { useUser, SignInButton } from "@clerk/clerk-react"
 import { Navigate } from "react-router-dom"
 import {
   Sparkles,
@@ -9,7 +9,7 @@ import {
   BarChart3,
   MessageCircle,
   ArrowRight,
-  ChevronDown,
+  
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'

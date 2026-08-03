@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from "react"
 import { Link, useOutletContext } from "react-router-dom"
 import { useAuth } from "@clerk/clerk-react"
-import { Compass, Flame, Loader2, PlusCircle, SearchX, Sparkles } from "lucide-react"
+import { Flame, Loader2, PlusCircle, SearchX, Sparkles } from "lucide-react"
 import {
   fetchCommunityDecks,
   saveCommunityDeck,
@@ -9,7 +9,6 @@ import {
 } from "@/lib/api"
 import { CommunityDeckCard } from "@/components/vocabulary/CommunityDeckCard"
 import { Button } from "@/components/ui/button"
-import { Card } from "@/components/ui/card"
 import { cn } from "@/lib/utils"
 
 const sortTabs = [
